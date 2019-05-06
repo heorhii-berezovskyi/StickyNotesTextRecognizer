@@ -10,7 +10,7 @@ class SimpleNet(nn.Module):
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=20, kernel_size=5, stride=1)
         self.conv2 = nn.Conv2d(in_channels=20, out_channels=50, kernel_size=5, stride=1)
         self.fc1 = nn.Linear(in_features=4 * 4 * 50, out_features=500)
-        self.fc2 = nn.Linear(in_features=500, out_features=10)
+        self.fc2 = nn.Linear(in_features=500, out_features=47)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))

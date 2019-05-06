@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 from torch.utils.data import Dataset
 
@@ -5,9 +7,9 @@ from event_storming_sticky_notes_recognizer.Name import Name
 
 
 class EmnistDataset(Dataset):
-    def __init__(self, data_path: str, labels_path: str, transform=None):
-        self.data = np.load(data_path)
-        self.labels = np.load(labels_path)
+    def __init__(self, data_set_dir: str, data_set_type: str, transform=None):
+        self.data = np.load(os.path.join(data_set_dir, data_set_type + '_data.npy'))
+        self.labels = np.load(os.path.join(data_set_dir, data_set_type + '_labels.npy'))
         self.transform = transform
 
     def __len__(self):
@@ -17,7 +19,7 @@ class EmnistDataset(Dataset):
         image = self.data[idx]
         label = self.labels[idx]
 
-        sample = {Name.LABEL: label, Name.IMAGE: image}
+        sample = {Name.LABEL.value: label, Name.IMAGE.value: image}
 
         if self.transform:
             sample = self.transform(sample)
