@@ -23,10 +23,13 @@ class ImageToLettersParser:
         return letters
 
     @staticmethod
-    def find_contours(image: ndarray) -> list:
+    def find_contours(image: ndarray, thresh_value: int) -> list:
         img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-        thresh, img_bin = cv2.threshold(img_gray, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+        thresh, img_bin = cv2.threshold(img_gray, thresh_value, 255, cv2.THRESH_BINARY)
+
+        cv2.imshow('img', img_bin)
+        cv2.waitKey(0)
 
         # Find contours for image, which will detect all the boxes
         im2, contours, hierarchy = cv2.findContours(img_bin, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -34,6 +37,8 @@ class ImageToLettersParser:
 
     @staticmethod
     def save_letters(letters: list, path_to: str):
+        if not os.path.exists(path_to):
+            os.mkdir(path=path_to)
         for i in range(len(letters)):
             cv2.imwrite(os.path.join(path_to, (str(i) + '.png')), letters[i])
 
@@ -70,7 +75,7 @@ def run(args):
 
     image_to_parse = cv2.imread(args.image)
 
-    contours = parser.find_contours(image=image_to_parse)
+    contours = parser.find_contours(image=image_to_parse, thresh_value=args.thresh)
 
     sorted_contours, _ = parser.sort_contours(contours=contours,
                                               method="top-to-bottom")
@@ -85,10 +90,13 @@ def run(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Trains specified model with specified parameters.')
     parser.add_argument('--min_letter_width', type=int, help='Minimal width of a letter on image.', default=400)
-    parser.add_argument('--max_letter_width', type=int, help='Maximal width of a letter on image.', default=600)
+    parser.add_argument('--max_letter_width', type=int, help='Maximal width of a letter on image.', default=800)
 
     parser.add_argument('--min_letter_height', type=int, help='Minimal height of a letter on image.', default=400)
-    parser.add_argument('--max_letter_height', type=int, help='Maximal height of a letter on image.', default=600)
+    parser.add_argument('--max_letter_height', type=int, help='Maximal height of a letter on image.', default=800)
+
+    parser.add_argument('--thresh', type=int, help='Thresh value used to convert image into binary form.',
+                        default=240)
 
     parser.add_argument('--image', type=str, help='Image to parse path.',
                         default=r'C:\Users\heorhii.berezovskyi\Documents\letters\1.tif')
