@@ -36,13 +36,6 @@ class ImageToLettersParser:
         return contours
 
     @staticmethod
-    def save_letters(letters: list, path_to: str):
-        if not os.path.exists(path_to):
-            os.mkdir(path=path_to)
-        for i in range(len(letters)):
-            cv2.imwrite(os.path.join(path_to, (str(i) + '.png')), letters[i])
-
-    @staticmethod
     def sort_contours(contours: list, method="left-to-right") -> (list, list):
         # initialize the reverse flag and sort index
         reverse = False
@@ -66,6 +59,13 @@ class ImageToLettersParser:
         # return the list of sorted contours and bounding boxes
         return contours, bounding_boxes
 
+    @staticmethod
+    def save_letters(letters: list, path_to: str):
+        if not os.path.exists(path_to):
+            os.mkdir(path=path_to)
+        for i in range(len(letters)):
+            cv2.imwrite(os.path.join(path_to, (str(i) + '.png')), letters[i])
+
 
 def run(args):
     parser = ImageToLettersParser(min_letter_width=args.min_letter_width,
@@ -88,7 +88,7 @@ def run(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Trains specified model with specified parameters.')
+    parser = argparse.ArgumentParser(description='Converts template with handwritten letters into letter images.')
     parser.add_argument('--min_letter_width', type=int, help='Minimal width of a letter on image.', default=400)
     parser.add_argument('--max_letter_width', type=int, help='Maximal width of a letter on image.', default=800)
 
