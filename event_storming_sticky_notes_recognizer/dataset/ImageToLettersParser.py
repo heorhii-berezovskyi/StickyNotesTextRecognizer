@@ -28,9 +28,6 @@ class ImageToLettersParser:
 
         thresh, img_bin = cv2.threshold(img_gray, thresh_value, 255, cv2.THRESH_BINARY)
 
-        cv2.imshow('img', img_bin)
-        cv2.waitKey(0)
-
         # Find contours for image, which will detect all the boxes
         im2, contours, hierarchy = cv2.findContours(img_bin, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         return contours
@@ -96,12 +93,12 @@ if __name__ == "__main__":
     parser.add_argument('--max_letter_height', type=int, help='Maximal height of a letter on image.', default=800)
 
     parser.add_argument('--thresh', type=int, help='Thresh value used to convert image into binary form.',
-                        default=240)
+                        default=128)
 
     parser.add_argument('--image', type=str, help='Image to parse path.',
-                        default=r'C:\Users\heorhii.berezovskyi\Documents\letters\1.tif')
+                        default=r'C:\Users\heorhii.berezovskyi\Documents\letters\10.tif')
     parser.add_argument('--write_to', type=str, help='Directory to save letters.',
-                        default=r'C:\Users\heorhii.berezovskyi\Documents\LettersDataset\1')
+                        default=r'C:\Users\heorhii.berezovskyi\Documents\LettersDataset\10')
 
     _args = parser.parse_args()
     run(_args)
