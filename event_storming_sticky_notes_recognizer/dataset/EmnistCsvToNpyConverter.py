@@ -5,7 +5,7 @@ import numpy as np
 from numpy import ndarray
 
 
-class EmnistDatasetFormatter:
+class EmnistCsvToNpyConverter:
     """
      Converts emnist data set from csv to .npy format.
     """
@@ -42,8 +42,8 @@ class EmnistDatasetFormatter:
 
 
 def run(args):
-    formatter = EmnistDatasetFormatter(num_of_channels=args.num_channels,
-                                       image_size=args.image_size)
+    formatter = EmnistCsvToNpyConverter(num_of_channels=args.num_channels,
+                                        image_size=args.image_size)
 
     formatter.to_npy(dataset_path=args.dataset,
                      new_dir=args.write_to,

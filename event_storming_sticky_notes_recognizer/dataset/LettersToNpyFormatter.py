@@ -37,16 +37,16 @@ class LettersToNpyFormatter:
         return self.mapping[index]
 
     def format(self) -> (ndarray, ndarray):
-        labels = []
-        images = []
+        all_labels = []
+        all_images = []
         sub_dirs = os.listdir(self.directory)
         for sub_dir in sub_dirs:
             img_dir = os.path.join(self.directory, sub_dir)
             image_paths = self._content(img_dir=img_dir)
             folder_labels, folder_images = self._get_labels_and_images(image_paths=image_paths)
-            labels += folder_labels
-            images += folder_images
-        return np.asarray(labels, dtype=np.uint8), np.asarray(images, dtype=np.uint8)
+            all_labels += folder_labels
+            all_images += folder_images
+        return np.asarray(all_labels, dtype=np.uint8), np.asarray(all_images, dtype=np.uint8)
 
 
 def run(args):
