@@ -159,24 +159,48 @@ def run_add_closing(args):
 
 def run_all(args):
     converter = ToEmnistDataConverter()
-    image_names = glob.glob(args.img_dir)
-    images = converter.read_images(image_names=image_names)
 
-    binary_images = converter.to_binary(images=images,
-                                        thresh_value=args.thresh)
+    directory = r'C:\Users\heorhii.berezovskyi\Documents\letters'
+    subdirs = os.listdir(directory)
 
-    closings = converter.add_closing(images=binary_images)
+    for dir in subdirs:
+        if dir == 'marker':
+            image_paths = glob.glob(os.path.join(directory, dir) + r'\*')
+            images = converter.read_images(image_names=image_paths)
 
-    rois = converter.extract_roi(images=closings)
+            binary_images = converter.to_binary(images=images,
+                                                thresh_value=args.thresh)
+            closings = converter.add_closing(images=binary_images)
 
-    centered = converter.center_frame(images=rois)
+            rois = converter.extract_roi(images=closings)
 
-    resized = converter.resize_and_resample(images=centered,
-                                            size=args.final_size)
+            converter.save_letters(letters=rois,
+                                   letters_names=image_paths,
+                                   path_to=args.write_to)
 
-    converter.save_letters(letters=resized,
-                           letters_names=image_names,
-                           path_to=args.write_to)
+            for path in image_paths:
+                print(path)
+                print(int(os.path.splitext(os.path.basename(path))[0]))
+
+    # converter = ToEmnistDataConverter()
+    # image_names = glob.glob(args.img_dir)
+    # images = converter.read_images(image_names=image_names)
+    #
+    # binary_images = converter.to_binary(images=images,
+    #                                     thresh_value=args.thresh)
+    #
+    # closings = converter.add_closing(images=binary_images)
+    #
+    # rois = converter.extract_roi(images=closings)
+    #
+    # # centered = converter.center_frame(images=rois)
+    # #
+    # # resized = converter.resize_and_resample(images=centered,
+    # #                                         size=args.final_size)
+    #
+    # converter.save_letters(letters=rois,
+    #                        letters_names=image_names,
+    #                        path_to=args.write_to)
 
 
 if __name__ == "__main__":

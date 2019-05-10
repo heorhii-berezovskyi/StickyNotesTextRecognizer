@@ -1,8 +1,11 @@
 import argparse
+import glob
 import os
 
 import cv2
 from numpy import ndarray
+
+from event_storming_sticky_notes_recognizer.Exception import UnsupportedParamException
 
 
 class ImageToLettersParser:
@@ -64,24 +67,39 @@ class ImageToLettersParser:
             cv2.imwrite(os.path.join(path_to, (str(i) + '.png')), letters[i])
 
 
+def apply(args, parser: ImageToLettersParser, dir_type: str):
+    image_paths = glob.glob(os.path.join(args.directory, dir_type) + r'\*')
+    for path in image_paths:
+        image_to_parse = cv2.imread(path)
+
+        contours = parser.find_contours(image=image_to_parse, thresh_value=args.thresh)
+
+        sorted_contours, _ = parser.sort_contours(contours=contours, method="top-to-bottom")
+
+        letters = parser.extract_letters(orig_image=image_to_parse, sorted_contours=sorted_contours)
+
+        if not os.path.exists(os.path.join(args.write_to, dir_type)):
+            os.mkdir(path=os.path.join(args.write_to, dir_type))
+        parser.save_letters(letters=letters, path_to=os.path.join(args.write_to,
+                                                                  dir_type,
+                                                                  os.path.splitext(os.path.basename(path))[0]))
+
+
 def run(args):
     parser = ImageToLettersParser(min_letter_width=args.min_letter_width,
                                   max_letter_width=args.max_letter_width,
                                   min_letter_height=args.min_letter_height,
                                   max_letter_height=args.max_letter_height)
 
-    image_to_parse = cv2.imread(args.image)
+    subdirs = os.listdir(args.directory)
 
-    contours = parser.find_contours(image=image_to_parse, thresh_value=args.thresh)
-
-    sorted_contours, _ = parser.sort_contours(contours=contours,
-                                              method="top-to-bottom")
-
-    letters = parser.extract_letters(orig_image=image_to_parse,
-                                     sorted_contours=sorted_contours)
-
-    parser.save_letters(letters=letters,
-                        path_to=args.write_to)
+    for dir in subdirs:
+        if dir == 'marker':
+            apply(args=args, parser=parser, dir_type='marker')
+        elif dir == 'pen':
+            apply(args=args, parser=parser, dir_type='pen')
+        else:
+            raise UnsupportedParamException('Handling of directory with name ' + dir + ' is not supported.')
 
 
 if __name__ == "__main__":
@@ -95,10 +113,11 @@ if __name__ == "__main__":
     parser.add_argument('--thresh', type=int, help='Thresh value used to convert image into binary form.',
                         default=128)
 
-    parser.add_argument('--image', type=str, help='Image to parse path.',
-                        default=r'C:\Users\heorhii.berezovskyi\Documents\letters\10.tif')
+    parser.add_argument('--directory', type=str,
+                        help='directory with marker and pen folders containing template images with letters.',
+                        default=r'C:\Users\heorhii.berezovskyi\Documents\letters')
     parser.add_argument('--write_to', type=str, help='Directory to save letters.',
-                        default=r'C:\Users\heorhii.berezovskyi\Documents\LettersDataset\10')
+                        default=r'C:\Users\heorhii.berezovskyi\Documents\LettersDataset')
 
     _args = parser.parse_args()
     run(_args)
