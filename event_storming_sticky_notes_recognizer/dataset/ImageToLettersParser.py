@@ -67,6 +67,10 @@ class ImageToLettersParser:
             cv2.imwrite(os.path.join(path_to, (str(i) + '.png')), letters[i])
 
 
+def get_image_name(path: str) -> str:
+    return os.path.splitext(os.path.basename(path))[0]
+
+
 def apply(args, parser: ImageToLettersParser, dir_type: str):
     image_paths = glob.glob(os.path.join(args.directory, dir_type) + r'\*')
     for path in image_paths:
@@ -80,9 +84,12 @@ def apply(args, parser: ImageToLettersParser, dir_type: str):
 
         if not os.path.exists(os.path.join(args.write_to, dir_type)):
             os.mkdir(path=os.path.join(args.write_to, dir_type))
-        parser.save_letters(letters=letters, path_to=os.path.join(args.write_to,
-                                                                  dir_type,
-                                                                  os.path.splitext(os.path.basename(path))[0]))
+        parser.save_letters(letters=letters,
+                            path_to=os.path.join(args.write_to,
+                                                 dir_type,
+                                                 get_image_name(path=path)
+                                                 )
+                            )
 
 
 def run(args):
@@ -94,10 +101,8 @@ def run(args):
     subdirs = os.listdir(args.directory)
 
     for dir in subdirs:
-        if dir == 'marker':
-            apply(args=args, parser=parser, dir_type='marker')
-        elif dir == 'pen':
-            apply(args=args, parser=parser, dir_type='pen')
+        if dir == 'marker' or dir == 'pen':
+            apply(args=args, parser=parser, dir_type=dir)
         else:
             raise UnsupportedParamException('Handling of directory with name ' + dir + ' is not supported.')
 
