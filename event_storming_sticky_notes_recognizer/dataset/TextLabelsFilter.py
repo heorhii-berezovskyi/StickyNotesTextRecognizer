@@ -2,16 +2,18 @@ import argparse
 
 
 class TextLabelsFilter:
-    @staticmethod
-    def load_text_labels(file_path: str) -> list:
-        with open(file_path) as f:
+    def __init__(self, text_labels_path: str, filter_length: int):
+        self.path = text_labels_path
+        self.length = filter_length
+
+    def load_text_labels(self) -> list:
+        with open(self.path) as f:
             result = f.readlines()
         return result
 
-    @staticmethod
-    def filter_by_length(labels: list, filter_length: int) -> list:
+    def filter_by_length(self, labels: list) -> list:
         stripped = [w.strip() for w in labels]
-        filtered = filter(lambda x: (len(x) <= filter_length), stripped)
+        filtered = filter(lambda x: (len(x) <= self.length), stripped)
         return list(filtered)
 
     @staticmethod
@@ -22,9 +24,9 @@ class TextLabelsFilter:
 
 
 def run(args):
-    labels_filter = TextLabelsFilter()
-    text_labels = labels_filter.load_text_labels(file_path=args.labels_to_filter)
-    filtered_text_labels = labels_filter.filter_by_length(labels=text_labels, filter_length=args.filter_length)
+    labels_filter = TextLabelsFilter(text_labels_path=args.labels_to_filter,
+                                     filter_length=args.filter_length)
+    filtered_text_labels = labels_filter.filter_by_length(labels=labels_filter.load_text_labels())
     labels_filter.save(labels=filtered_text_labels, to=args.write_to)
 
 

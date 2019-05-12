@@ -1,11 +1,12 @@
 import argparse
-import glob
 import os
 
 import cv2
 from numpy import ndarray
 
-from event_storming_sticky_notes_recognizer.Exception import UnsupportedParamException
+from event_storming_sticky_notes_recognizer.dataset.ContoursProcessor import ContoursProcessor
+from event_storming_sticky_notes_recognizer.dataset.FileUtils import get_list_of_files, get_file_name
+from event_storming_sticky_notes_recognizer.dataset.ImageUtils import save_images
 
 
 class ImageToLettersParser:
@@ -15,9 +16,9 @@ class ImageToLettersParser:
         self.min_h = min_letter_height
         self.max_h = max_letter_height
 
-    def extract_letters(self, orig_image: ndarray, sorted_contours: list) -> list:
+    def extract_letters(self, orig_image: ndarray, contours: list) -> list:
         letters = []
-        for c in sorted_contours:
+        for c in contours:
             # Returns the location and width,height for every contour
             x, y, w, h = cv2.boundingRect(c)
             if self.min_w < w < self.max_w and self.min_h < h < self.max_h:
@@ -25,71 +26,26 @@ class ImageToLettersParser:
                 letters.append(new_img)
         return letters
 
-    @staticmethod
-    def find_contours(image: ndarray, thresh_value: int) -> list:
-        img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-        thresh, img_bin = cv2.threshold(img_gray, thresh_value, 255, cv2.THRESH_BINARY)
-
-        # Find contours for image, which will detect all the boxes
-        im2, contours, hierarchy = cv2.findContours(img_bin, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        return contours
-
-    @staticmethod
-    def sort_contours(contours: list, method="left-to-right") -> (list, list):
-        # initialize the reverse flag and sort index
-        reverse = False
-        i = 0
-
-        # handle if we need to sort in reverse
-        if method == "right-to-left" or method == "bottom-to-top":
-            reverse = True
-
-        # handle if we are sorting against the y-coordinate rather than
-        # the x-coordinate of the bounding box
-        if method == "top-to-bottom" or method == "bottom-to-top":
-            i = 1
-
-        # construct the list of bounding boxes and sort them from top to
-        # bottom
-        bounding_boxes = [cv2.boundingRect(c) for c in contours]
-        contours, bounding_boxes = zip(*sorted(zip(contours, bounding_boxes),
-                                               key=lambda b: b[1][i], reverse=reverse))
-
-        # return the list of sorted contours and bounding boxes
-        return contours, bounding_boxes
-
-    @staticmethod
-    def save_letters(letters: list, path_to: str):
-        if not os.path.exists(path_to):
-            os.mkdir(path=path_to)
-        for i in range(len(letters)):
-            cv2.imwrite(os.path.join(path_to, (str(i) + '.png')), letters[i])
-
-
-def get_image_name(path: str) -> str:
-    return os.path.splitext(os.path.basename(path))[0]
-
 
 def apply(args, parser: ImageToLettersParser, dir_type: str):
-    image_paths = glob.glob(os.path.join(args.directory, dir_type) + r'\*')
+    directory = os.path.join(args.directory, dir_type)
+    image_paths = get_list_of_files(folder=directory)
+    cont_processor = ContoursProcessor(thresh_value=args.thresh)
+    path_to_save = os.path.join(args.write_to, dir_type)
     for path in image_paths:
         image_to_parse = cv2.imread(path)
 
-        contours = parser.find_contours(image=image_to_parse, thresh_value=args.thresh)
+        contours = cont_processor.find_contours(image=image_to_parse)
 
-        sorted_contours, _ = parser.sort_contours(contours=contours, method="top-to-bottom")
+        sorted_contours, _ = cont_processor.sort_contours(contours=contours)
 
-        letters = parser.extract_letters(orig_image=image_to_parse, sorted_contours=sorted_contours)
+        letters = parser.extract_letters(orig_image=image_to_parse, contours=sorted_contours)
 
-        if not os.path.exists(os.path.join(args.write_to, dir_type)):
-            os.mkdir(path=os.path.join(args.write_to, dir_type))
-        parser.save_letters(letters=letters,
-                            path_to=os.path.join(args.write_to,
-                                                 dir_type,
-                                                 get_image_name(path=path)
-                                                 )
-                            )
+        if not os.path.exists(path_to_save):
+            os.makedirs(path_to_save, exist_ok=True)
+        save_images(letters=letters,
+                    path_to=os.path.join(path_to_save,
+                                         get_file_name(path=path)))
 
 
 def run(args):
@@ -103,8 +59,6 @@ def run(args):
     for dir in subdirs:
         if dir == 'marker' or dir == 'pen':
             apply(args=args, parser=parser, dir_type=dir)
-        else:
-            raise UnsupportedParamException('Handling of directory with name ' + dir + ' is not supported.')
 
 
 if __name__ == "__main__":

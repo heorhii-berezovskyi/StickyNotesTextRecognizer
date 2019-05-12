@@ -125,60 +125,6 @@ class DatasetCreator:
             result = f.readlines()
         return result
 
-    # @staticmethod
-    # def center_frame(images: list) -> list:
-    #     squares = []
-    #     for image in images:
-    #         height, width = image.shape
-    #         if height > width:
-    #             differ = height
-    #         else:
-    #             differ = width
-    #
-    #         mask = np.zeros((differ, differ), dtype=np.uint8)
-    #         x_pos = int((differ - width) / 2)
-    #         y_pos = int((differ - height) / 2)
-    #         mask[y_pos:y_pos + height, x_pos:x_pos + width] = image[0:height, 0:width]
-    #         # thresh, img_bin = cv2.threshold(mask, 70, 255, cv2.THRESH_BINARY)
-    #         squares.append(mask)
-    #     return squares
-    #
-    # @staticmethod
-    # def resize_and_resample(images: list, size: int) -> list:
-    #     results = []
-    #     for image in images:
-    #         resized = cv2.resize(image, (size - 4, size - 4), interpolation=cv2.INTER_AREA)
-    #         padded = np.pad(resized, ((2, 2), (2, 2)), 'constant')
-    #         padded = padded * 1.7
-    #         padded[padded > 255.] = 255.
-    #         padded = padded.astype(np.uint8)
-    #         results.append(padded)
-    #     return results
-
-
-# def run_center_frame(args):
-#     converter = DatasetCreator()
-#     image_names = glob.glob(args.img_dir)
-#     images = converter.read_images(image_names=image_names)
-#
-#     squares = converter.center_frame(images=images)
-#
-#     converter.save_letters(letters=squares,
-#                            letters_names=image_names,
-#                            path_to=args.write_to)
-#
-#
-# def run_resize_resample(args):
-#     converter = DatasetCreator()
-#     image_names = glob.glob(args.img_dir)
-#     images = converter.read_images(image_names=image_names)
-#
-#     resized_squares = converter.resize_and_resample(images=images,
-#                                                     size=args.final_size)
-#     converter.save_letters(letters=resized_squares,
-#                            letters_names=image_names,
-#                            path_to=args.write_to)
-
 
 def run(args):
     creator = DatasetCreator(dataset=args.data_path,

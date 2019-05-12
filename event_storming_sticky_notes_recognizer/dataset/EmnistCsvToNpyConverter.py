@@ -15,7 +15,7 @@ class EmnistCsvToNpyConverter:
         self.image_size = image_size
 
     def to_npy(self, dataset_path: str, new_dir: str, split_name: str, skip_header: int):
-        dataset = self._load(path_from=dataset_path, skip_header=skip_header)
+        dataset = np.genfromtxt(dataset_path, delimiter=',', skip_header=skip_header, dtype=np.uint8)
         labels, data = self._split_into_labels_and_data(dataset=dataset)
 
         data = np.apply_along_axis(func1d=self._rotate, arr=data, axis=1)
@@ -29,10 +29,6 @@ class EmnistCsvToNpyConverter:
         image = np.fliplr(image)
         image = np.rot90(image)
         return image
-
-    @staticmethod
-    def _load(path_from: str, skip_header: int) -> ndarray:
-        return np.genfromtxt(path_from, delimiter=',', skip_header=skip_header, dtype=np.uint8)
 
     @staticmethod
     def _split_into_labels_and_data(dataset: ndarray) -> (ndarray, ndarray):
