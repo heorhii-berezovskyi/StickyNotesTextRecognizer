@@ -50,27 +50,23 @@ class LetterImage:
         return LetterImage(image=closing)
 
 
-def apply(args, dir: str):
-    subfolders = os.listdir(os.path.join(args.directory, dir))
-    for folder in subfolders:
-        folder_path = os.path.join(args.directory, dir, folder)
-        image_paths = get_list_of_files(folder=folder_path)
-
-        for path in image_paths:
-            letter = LetterImage(image=cv2.imread(path, cv2.IMREAD_GRAYSCALE))
-            binary_letter = letter.to_binary(thresh_value=args.thresh,
-                                             dirty_frame_size=args.frame_size)
-            closed_letter = binary_letter.with_morph_closing(kernel_size=args.kernel_size)
-            roi = closed_letter.extract_roi(min_piece_area=args.min_area)
-            roi.save(to=path)
-
-
 def run(args):
     subdirs = os.listdir(args.directory)
 
     for dir in subdirs:
         if dir == 'marker' or dir == 'pen':
-            apply(args=args, dir=dir)
+            subfolders = os.listdir(os.path.join(args.directory, dir))
+            for folder in subfolders:
+                folder_path = os.path.join(args.directory, dir, folder)
+                image_paths = get_list_of_files(folder=folder_path)
+
+                for path in image_paths:
+                    letter = LetterImage(image=cv2.imread(path, cv2.IMREAD_GRAYSCALE))
+                    binary_letter = letter.to_binary(thresh_value=args.thresh,
+                                                     dirty_frame_size=args.frame_size)
+                    closed_letter = binary_letter.with_morph_closing(kernel_size=args.kernel_size)
+                    roi = closed_letter.extract_roi(min_piece_area=args.min_area)
+                    roi.save(to=path)
 
 
 if __name__ == "__main__":
