@@ -3,7 +3,7 @@ from numpy import ndarray
 
 
 class LabelEncoderDecoder:
-    def __init__(self, max_word_len: int):
+    def __init__(self, max_word_len=16):
         self.length = max_word_len
         self.alphabet = ['a', 'b', 'c', 'd',
                          'e', 'f', 'g', 'h',
@@ -34,3 +34,7 @@ class LabelEncoderDecoder:
                 return decoded
             decoded += self.decode_character(value=element)
         return decoded
+
+    @staticmethod
+    def decode_word_len(array: ndarray) -> int:
+        return np.where(array == 0)[0][0]

@@ -1,6 +1,8 @@
 import torch
 import torch.nn.functional as F
 
+from event_storming_sticky_notes_recognizer.Name import Name
+
 
 class Trainer:
     @staticmethod
@@ -9,11 +11,12 @@ class Trainer:
         # for batch_idx, (data, target) in enumerate(train_loader):
         for batch_idx, sample in enumerate(train_loader):
             optimizer.zero_grad()
-            data = sample['image']
-            print(data.shape)
-            target = sample['label']
+            data = sample[Name.IMAGE.value]
+            target = sample[Name.LABEL.value]
+            target_lens = sample[Name.LABEL_LEN.value]
+            print(target_lens)
             output = model(data)
-            loss = F.ctc_loss(output, target)
+            loss = F.ctc_loss(output, target, target_lengths=target_lens)
             loss.backward()
             optimizer.step()
             if batch_idx % args.log_interval == 0:

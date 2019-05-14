@@ -5,7 +5,7 @@ import torch
 from torch import optim
 from torch.utils.data import DataLoader
 
-from event_storming_sticky_notes_recognizer.dataset.EmnistDataset import EmnistDataset
+from event_storming_sticky_notes_recognizer.dataset.WordsDataset import WordsDataset
 from event_storming_sticky_notes_recognizer.dataset.transforms.ToFloatTensor import ToFloatTensor
 from event_storming_sticky_notes_recognizer.model.Trainer import Trainer
 from event_storming_sticky_notes_recognizer.run.models.crnn import CRNN
@@ -14,9 +14,9 @@ from event_storming_sticky_notes_recognizer.run.models.crnn import CRNN
 def run(args):
     torch.manual_seed(args.seed)
 
-    train_dataset = EmnistDataset(data_set_dir=r'C:\Users\heorhii.berezovskyi\Documents\words',
-                                  data_set_type='train',
-                                  transform=ToFloatTensor())
+    train_dataset = WordsDataset(data_set_dir=r'C:\Users\heorhii.berezovskyi\Documents\words',
+                                 data_set_type='train',
+                                 transform=ToFloatTensor())
 
     train_loader = DataLoader(dataset=train_dataset,
                               batch_size=args.batch_size,
