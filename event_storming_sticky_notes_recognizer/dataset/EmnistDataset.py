@@ -17,6 +17,7 @@ class EmnistDataset(Dataset):
 
     def __getitem__(self, idx):
         image = self.data[idx]
+        image = image.reshape(1, 64, 512)
         label = self.labels[idx]
 
         sample = {Name.LABEL.value: label, Name.IMAGE.value: image}

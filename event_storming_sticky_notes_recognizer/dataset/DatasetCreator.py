@@ -6,11 +6,12 @@ import numpy as np
 from numpy import ndarray
 
 from event_storming_sticky_notes_recognizer.Exception import UnsupportedParamException
+from event_storming_sticky_notes_recognizer.dataset.LabelEncoderDecoder import LabelEncoderDecoder
 
 
 class DatasetCreator:
     def __init__(self, dataset: str, words_path: str, pad_value: int, word_height: int, min_letter_size: int,
-                 max_letter_size: int, tall_to_low_letter_coef: float):
+                 max_letter_size: int, tall_to_low_letter_coef: float, label_encoder_decoder: LabelEncoderDecoder):
         self.directory = dataset
         self.word_list = self._load(file_path=words_path)
         self.pad_val = pad_value
@@ -27,6 +28,7 @@ class DatasetCreator:
                                'q': 33, 'r': 35, 's': 37, 't': 39,
                                'u': 41, 'v': 43, 'w': 45, 'x': 47,
                                'y': 49, 'z': 51}
+        self.encoder_decoder = label_encoder_decoder
 
     @staticmethod
     def _get_num_of_copies(data_set_dir: str) -> int:
@@ -90,7 +92,7 @@ class DatasetCreator:
         word_label = np.zeros(16, dtype=np.uint8)
         num_of_occupied_width = 0
         for i in range(len(word)):
-            letter_class = self.images_mapping[word[i]]
+            letter_class = self.encoder_decoder.encode_character(character=word[i])
             letter_image = self.char_to_image(character=word[i], stroke='pen')
 
             word_image[:, num_of_occupied_width: num_of_occupied_width + letter_image.shape[1]] = letter_image
@@ -109,16 +111,6 @@ class DatasetCreator:
                 images.append(word_image)
         return np.asarray(labels), np.asarray(images)
 
-    def decode(self, label: ndarray) -> str:
-        result = ''
-        for l in label:
-            if l == 0:
-                return result
-            for character, code in self.images_mapping.items():
-                if code == l:
-                    result += character
-        return result
-
     @staticmethod
     def _load(file_path: str) -> list:
         with open(file_path) as f:
@@ -127,35 +119,30 @@ class DatasetCreator:
 
 
 def run(args):
+    label_encoder_decoder = LabelEncoderDecoder(max_word_len=args.max_length)
     creator = DatasetCreator(dataset=args.data_path,
                              words_path=args.words_path,
                              pad_value=2,
                              word_height=args.word_height,
                              min_letter_size=37,
                              max_letter_size=41,
-                             tall_to_low_letter_coef=1.3)
+                             tall_to_low_letter_coef=1.3,
+                             label_encoder_decoder=label_encoder_decoder)
 
     labels, images = creator.create(words_count=args.words_count)
     np.save(os.path.join(args.save_to, 'labels.npy'), labels)
-    np.save(os.path.join(args.save_to, 'images.npy'), images)
+    np.save(os.path.join(args.save_to, 'data.npy'), images)
 
 
 def run_labels_check(args):
-    creator = DatasetCreator(dataset=args.data_path,
-                             words_path=args.words_path,
-                             pad_value=2,
-                             word_height=args.word_height,
-                             min_letter_size=37,
-                             max_letter_size=41,
-                             tall_to_low_letter_coef=1.3)
+    label_encoder_decoder = LabelEncoderDecoder(max_word_len=args.max_length)
     labels = np.load(os.path.join(args.save_to, 'labels.npy'))
-    images = np.load(os.path.join(args.save_to, 'images.npy'))
+    images = np.load(os.path.join(args.save_to, 'data.npy'))
     for i in range(200, 250):
         image = images[i]
-        print(creator.decode(label=labels[i]))
+        label = labels[i]
+        print(label_encoder_decoder.decode_word(array=label))
         image = image.reshape(64, 512)
-        # cv2.imshow('img', image)
-        # cv2.waitKey(0)
         cv2.imwrite(os.path.join(r'C:\Users\heorhii.berezovskyi\Documents\words', str(i) + '.png'), image)
 
 
@@ -171,7 +158,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--words_count', type=int,
                         help='Number of word copies to create.',
-                        default=2)
+                        default=1)
 
     parser.add_argument('--save_to', type=str,
                         help='Path to a directory to save created dataset.',

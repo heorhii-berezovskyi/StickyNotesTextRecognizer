@@ -8,13 +8,13 @@ from torch.utils.data import DataLoader
 from event_storming_sticky_notes_recognizer.dataset.EmnistDataset import EmnistDataset
 from event_storming_sticky_notes_recognizer.dataset.transforms.ToFloatTensor import ToFloatTensor
 from event_storming_sticky_notes_recognizer.model.Trainer import Trainer
-from event_storming_sticky_notes_recognizer.run.models.ModelLoader import ModelLoader
+from event_storming_sticky_notes_recognizer.run.models.crnn import CRNN
 
 
 def run(args):
     torch.manual_seed(args.seed)
 
-    train_dataset = EmnistDataset(data_set_dir=r'C:\Users\heorhii.berezovskyi\Documents\emnist_balanced',
+    train_dataset = EmnistDataset(data_set_dir=r'C:\Users\heorhii.berezovskyi\Documents\words',
                                   data_set_type='train',
                                   transform=ToFloatTensor())
 
@@ -23,23 +23,13 @@ def run(args):
                               shuffle=True,
                               num_workers=4)
 
-    test_dataset = EmnistDataset(data_set_dir=r'C:\Users\heorhii.berezovskyi\Documents\emnist_balanced',
-                                 data_set_type='test',
-                                 transform=ToFloatTensor())
-    test_loader = DataLoader(dataset=test_dataset,
-                             batch_size=args.test_batch_size,
-                             shuffle=False,
-                             num_workers=4)
-
-    loader = ModelLoader()
-    model = loader.load(name='simple_net')
+    model = CRNN(image_height=64, num_of_channels=1, num_of_classes=27, num_of_lstm_hidden_units=128)
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
 
     trainer = Trainer()
 
     for epoch in range(1, args.epochs + 1):
         trainer.train(args=args, model=model, train_loader=train_loader, optimizer=optimizer, epoch=epoch)
-        trainer.test(model=model, test_loader=test_loader)
 
         if args.save_model:
             torch.save(model.state_dict(),
