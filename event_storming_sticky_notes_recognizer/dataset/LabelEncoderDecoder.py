@@ -31,10 +31,15 @@ class LabelEncoderDecoder:
         decoded = ''
         for element in array:
             if element == 0:
-                return decoded
-            decoded += self.decode_character(value=element)
+                decoded += '-'
+            else:
+                decoded += self.decode_character(value=element)
         return decoded
 
     @staticmethod
     def decode_word_len(array: ndarray) -> int:
-        return np.where(array == 0)[0][0]
+        try:
+            result = np.where(array == 0)[0][0]
+            return result
+        except Exception:
+            return len(array)

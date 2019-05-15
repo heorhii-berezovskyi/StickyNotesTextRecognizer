@@ -24,7 +24,7 @@ def run(args):
                               num_workers=4)
 
     model = CRNN(image_height=64, num_of_channels=1, num_of_classes=27, num_of_lstm_hidden_units=128)
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
     trainer = Trainer()
 
@@ -33,8 +33,8 @@ def run(args):
 
         if args.save_model:
             torch.save(model.state_dict(),
-                       os.path.join(r'C:\Users\heorhii.berezovskyi\Documents\emnist_balanced\models',
-                                    'emnist_cnn' + str(epoch) + '.pt'))
+                       os.path.join(r'C:\Users\heorhii.berezovskyi\Documents\words',
+                                    'crnn' + str(epoch) + '.pt'))
 
 
 if __name__ == "__main__":

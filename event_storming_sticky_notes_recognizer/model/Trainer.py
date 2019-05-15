@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+from torch.autograd import Variable
 
 from event_storming_sticky_notes_recognizer.Name import Name
 
@@ -14,9 +15,11 @@ class Trainer:
             data = sample[Name.IMAGE.value]
             target = sample[Name.LABEL.value]
             target_lens = sample[Name.LABEL_LEN.value]
-            print(target_lens)
             output = model(data)
-            loss = F.ctc_loss(output, target, target_lengths=target_lens)
+            # print(output.shape)
+            preds_size = Variable(torch.IntTensor([output.size(0)] * output.shape[1]))
+            loss = F.ctc_loss(log_probs=output, targets=target, input_lengths=preds_size, target_lengths=target_lens,
+                              zero_infinity=True)
             loss.backward()
             optimizer.step()
             if batch_idx % args.log_interval == 0:
