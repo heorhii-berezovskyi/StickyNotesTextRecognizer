@@ -101,15 +101,16 @@ class DatasetCreator:
             word_label[i] = letter_class
         return word_label, word_image
 
-    def create(self, words_count: int, stroke: str) -> (ndarray, ndarray):
+    def create(self, words_count: int) -> (ndarray, ndarray):
         labels = []
         images = []
         for word in self.word_list:
             for c in range(words_count):
-                word_label, word_image = self.to_image(word=word, stroke=stroke)
-                labels.append(word_label)
-                images.append(word_image)
-        return np.asarray(labels), np.asarray(images)
+                for stroke in ['marker', 'pen']:
+                    word_label, word_image = self.to_image(word=word, stroke=stroke)
+                    labels.append(word_label)
+                    images.append(word_image)
+        return np.asarray(labels, dtype=np.uint8), np.asarray(images, dtype=np.uint8)
 
     @staticmethod
     def _load(file_path: str) -> list:
@@ -122,16 +123,16 @@ def run(args):
     label_encoder_decoder = LabelEncoderDecoder(max_word_len=args.max_length)
     creator = DatasetCreator(dataset=args.data_path,
                              words_path=args.words_path,
-                             pad_value=2,
+                             pad_value=1,
                              word_height=args.word_height,
                              min_letter_size=37,
                              max_letter_size=41,
                              tall_to_low_letter_coef=1.3,
                              label_encoder_decoder=label_encoder_decoder)
 
-    labels, images = creator.create(words_count=args.words_count, stroke=args.stroke)
-    np.save(os.path.join(args.save_to, 'labels.npy'), labels)
+    labels, images = creator.create(words_count=args.words_count)
     np.save(os.path.join(args.save_to, 'data.npy'), images)
+    np.save(os.path.join(args.save_to, 'labels.npy'), labels)
 
 
 def run_labels_check(args):
@@ -143,29 +144,27 @@ def run_labels_check(args):
         label = labels[i]
         print(label_encoder_decoder.decode_word(array=label))
         image = image.reshape(64, 512)
-        cv2.imwrite(os.path.join(r'C:\Users\heorhii.berezovskyi\Documents\words', str(i) + '.png'), image)
+        cv2.imwrite(os.path.join(r'D:\words', str(i) + '.png'), image)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Creates words dataset based on letter images.')
-
-    parser.add_argument('--stroke', type=str, help='Type of a dataset to create(marker or pen).', default='marker')
 
     parser.add_argument('--data_path', type=str, help='Path to letter images in a .npy file.',
                         default=r'C:\Users\heorhii.berezovskyi\Documents\LettersDataset')
 
     parser.add_argument('--words_path', type=str,
                         help='Path to a text file with words based on dataset will be created.',
-                        default=r'C:\Users\heorhii.berezovskyi\Documents\words\words.txt')
+                        default=r'D:\words\words.txt')
 
-    parser.add_argument('--words_count', type=int, help='Number of word copies to create.', default=1)
+    parser.add_argument('--words_count', type=int, help='Number of word copies to create.', default=10)
 
     parser.add_argument('--save_to', type=str, help='Path to a directory to save created dataset.',
-                        default=r'C:\Users\heorhii.berezovskyi\Documents\words')
+                        default=r'D:\words')
     parser.add_argument('--max_length', type=int, help='Maximal number of letters in a single word.', default=16)
     parser.add_argument('--word_height', type=int, help='Height of a result word image.', default=64)
 
     _args = parser.parse_args()
 
-    # run(_args)
-    run_labels_check(_args)
+    run(_args)
+    # run_labels_check(_args)

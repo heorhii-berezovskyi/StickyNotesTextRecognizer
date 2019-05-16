@@ -58,7 +58,7 @@ def run(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Trains specified model with specified parameters.')
 
-    parser.add_argument('--dataset_dir', type=str, default=r'C:\Users\heorhii.berezovskyi\Documents\words\try',
+    parser.add_argument('--dataset_dir', type=str, default=r'D:\words\try',
                         help='Directory with dataset files train_labels.npy and train_data.npy.')
 
     parser.add_argument('--image_height', type=int, default=64, help='Height of input images.')
@@ -76,14 +76,14 @@ if __name__ == "__main__":
 
     parser.add_argument('--log_interval', type=int, default=1,
                         help='how many batches to wait before logging training status')
-    parser.add_argument('--save_model', default=r'C:\Users\heorhii.berezovskyi\Documents\words',
+    parser.add_argument('--save_model', default=r'D:\words\words',
                         help='Path to save the model')
 
-    parser.add_argument('--loss', default=r'C:\Users\heorhii.berezovskyi\Documents\words\loss',
+    parser.add_argument('--loss', default=r'D:\words\words\loss',
                         help='Path to dump loss value')
 
     parser.add_argument('--pretrained', default='',
-                        help='Path to a pretrained model weights.')  # r'C:\Users\heorhii.berezovskyi\Documents\words\crnn20.pt'
+                        help='Path to a pretrained model weights.')
     _args = parser.parse_args()
     run(args=_args)
 

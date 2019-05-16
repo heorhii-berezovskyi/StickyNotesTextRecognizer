@@ -43,10 +43,10 @@ def run(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Performs prediction for a given input image.')
     parser.add_argument('--model_path', type=str,
-                        default=r'C:\Users\heorhii.berezovskyi\Documents\words\crnn151.pt',
+                        default=r'D:\words\crnn151.pt',
                         help='Path to a model weights in .pt file')
     parser.add_argument('--data_path', type=str,
-                        default=r'C:\Users\heorhii.berezovskyi\Documents\words\train_data.npy',
+                        default=r'D:\words\train_data.npy',
                         help='Path to an .npy file with images')
 
     parser.add_argument('--image_height', type=int, default=64,
