@@ -36,6 +36,19 @@ class LabelEncoderDecoder:
                 decoded += self.decode_character(value=element)
         return decoded
 
+    def from_raw_to_label(self, array: ndarray) -> ndarray:
+        word = []
+        for i in range(len(array) - 1):
+            if array[i + 1] != array[i] and array[i] != 0:
+                word.append(array[i])
+        word = np.asarray(word)
+        result = np.zeros(self.length, dtype=np.uint8)
+        if len(word) <= 16:
+            result[:len(word)] = word
+        else:
+            result[:] = word[:16]
+        return result
+
     @staticmethod
     def decode_word_len(array: ndarray) -> int:
         try:

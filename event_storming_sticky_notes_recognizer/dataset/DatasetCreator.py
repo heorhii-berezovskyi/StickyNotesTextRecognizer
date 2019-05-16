@@ -86,14 +86,14 @@ class DatasetCreator:
     def pad(arr: ndarray, top: int, bot: int, left: int, right: int):
         return np.pad(arr, ((top, bot), (left, right)), mode='constant')
 
-    def to_image(self, word: str) -> (ndarray, ndarray):
+    def to_image(self, word: str, stroke: str) -> (ndarray, ndarray):
         word = word.strip()
         word_image = np.zeros((self.word_h, 512), dtype=np.uint8)
         word_label = np.zeros(16, dtype=np.uint8)
         num_of_occupied_width = 0
         for i in range(len(word)):
             letter_class = self.encoder_decoder.encode_character(character=word[i])
-            letter_image = self.char_to_image(character=word[i], stroke='pen')
+            letter_image = self.char_to_image(character=word[i], stroke=stroke)
 
             word_image[:, num_of_occupied_width: num_of_occupied_width + letter_image.shape[1]] = letter_image
 
@@ -101,12 +101,12 @@ class DatasetCreator:
             word_label[i] = letter_class
         return word_label, word_image
 
-    def create(self, words_count: int) -> (ndarray, ndarray):
+    def create(self, words_count: int, stroke: str) -> (ndarray, ndarray):
         labels = []
         images = []
         for word in self.word_list:
             for c in range(words_count):
-                word_label, word_image = self.to_image(word=word)
+                word_label, word_image = self.to_image(word=word, stroke=stroke)
                 labels.append(word_label)
                 images.append(word_image)
         return np.asarray(labels), np.asarray(images)
@@ -129,7 +129,7 @@ def run(args):
                              tall_to_low_letter_coef=1.3,
                              label_encoder_decoder=label_encoder_decoder)
 
-    labels, images = creator.create(words_count=args.words_count)
+    labels, images = creator.create(words_count=args.words_count, stroke=args.stroke)
     np.save(os.path.join(args.save_to, 'labels.npy'), labels)
     np.save(os.path.join(args.save_to, 'data.npy'), images)
 
@@ -147,8 +147,10 @@ def run_labels_check(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description='Creates words dataset based on letter images.')
+    parser = argparse.ArgumentParser(description='Creates words dataset based on letter images.')
+
+    parser.add_argument('--stroke', type=str, help='Type of a dataset to create(marker or pen).', default='marker')
+
     parser.add_argument('--data_path', type=str, help='Path to letter images in a .npy file.',
                         default=r'C:\Users\heorhii.berezovskyi\Documents\LettersDataset')
 
@@ -156,18 +158,11 @@ if __name__ == "__main__":
                         help='Path to a text file with words based on dataset will be created.',
                         default=r'C:\Users\heorhii.berezovskyi\Documents\words\words.txt')
 
-    parser.add_argument('--words_count', type=int,
-                        help='Number of word copies to create.',
-                        default=1)
+    parser.add_argument('--words_count', type=int, help='Number of word copies to create.', default=1)
 
-    parser.add_argument('--save_to', type=str,
-                        help='Path to a directory to save created dataset.',
+    parser.add_argument('--save_to', type=str, help='Path to a directory to save created dataset.',
                         default=r'C:\Users\heorhii.berezovskyi\Documents\words')
-
-    parser.add_argument('--max_length', type=int,
-                        help='Maximal number of letters in a single word.',
-                        default=16)
-
+    parser.add_argument('--max_length', type=int, help='Maximal number of letters in a single word.', default=16)
     parser.add_argument('--word_height', type=int, help='Height of a result word image.', default=64)
 
     _args = parser.parse_args()

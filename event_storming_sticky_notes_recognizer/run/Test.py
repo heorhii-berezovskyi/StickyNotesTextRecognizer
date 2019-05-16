@@ -37,11 +37,13 @@ def run(args):
 
     print(preds)
     print(converter.decode_word(array=preds))
+    print(converter.decode_word(array=converter.from_raw_to_label(array=preds)))
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Performs prediction for a given input image.')
-    parser.add_argument('--model_path', type=str, default=r'C:\Users\heorhii.berezovskyi\Documents\emnist_balanced\models\crnn.pt',
+    parser.add_argument('--model_path', type=str,
+                        default=r'C:\Users\heorhii.berezovskyi\Documents\words\crnn151.pt',
                         help='Path to a model weights in .pt file')
     parser.add_argument('--data_path', type=str,
                         default=r'C:\Users\heorhii.berezovskyi\Documents\words\train_data.npy',
@@ -53,18 +55,17 @@ if __name__ == "__main__":
     parser.add_argument('--image_width', type=int, default=512,
                         help='Width of a single image to perform prediction on.')
 
-    parser.add_argument('--num_of_channels', type=int, default=27,
+    parser.add_argument('--num_of_channels', type=int, default=1,
                         help='Number of symbols in alphabet including blank character.')
 
-    parser.add_argument('--num_of_classes', type=int, default=1,
+    parser.add_argument('--num_of_classes', type=int, default=27,
                         help='Number of channels in images.')
 
-    parser.add_argument('--num_of_lstm_hidden_units', type=int, default=128,
+    parser.add_argument('--num_of_lstm_hidden_units', type=int, default=256,
                         help='Number of LSTM hidden units.')
 
-    parser.add_argument('--image_index', type=int, default=5,
+    parser.add_argument('--image_index', type=int, default=0,
                         help='Index of an image in the .npy file to perform prediction on.')
 
     _args = parser.parse_args()
     run(args=_args)
-
