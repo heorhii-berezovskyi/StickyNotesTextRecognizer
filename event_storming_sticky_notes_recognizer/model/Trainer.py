@@ -9,7 +9,7 @@ from event_storming_sticky_notes_recognizer.dataset.LabelEncoderDecoder import L
 
 class Trainer:
     @staticmethod
-    def train(args, model, train_loader, optimizer, epoch):
+    def train(args, model, train_loader, optimizer, epoch) -> list:
         model.train()
         losses = []
         # for batch_idx, (data, target) in enumerate(train_loader):
@@ -28,7 +28,6 @@ class Trainer:
             loss.backward()
             optimizer.step()
             if batch_idx % args.log_interval == 0:
-                np.save(args.loss, np.asarray(losses))
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.
                       format(epoch,
                              batch_idx * len(data), len(train_loader.dataset),
@@ -36,9 +35,10 @@ class Trainer:
                              loss.item()
                              )
                       )
+        return losses
 
     @staticmethod
-    def test(model, test_loader):
+    def test(model, test_loader) -> (float, float):
         model.eval()
         test_loss = 0
         correct = 0
@@ -77,3 +77,4 @@ class Trainer:
                      100. * correct / len(test_loader.dataset)
                      )
               )
+        return test_loss, 100. * correct / len(test_loader.dataset)

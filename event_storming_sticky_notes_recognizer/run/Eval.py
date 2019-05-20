@@ -11,7 +11,6 @@ from event_storming_sticky_notes_recognizer.run.models.crnn import CRNN
 
 def run(args):
     test_dataset = WordsDataset(data_set_dir=args.dataset_dir,
-                                data_set_type='train',
                                 transform=ToFloatTensor())
 
     test_loader = DataLoader(dataset=test_dataset,
