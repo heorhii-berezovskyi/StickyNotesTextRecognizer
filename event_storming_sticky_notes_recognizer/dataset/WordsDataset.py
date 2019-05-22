@@ -8,11 +8,11 @@ from event_storming_sticky_notes_recognizer.dataset.LabelEncoderDecoder import L
 
 
 class WordsDataset(Dataset):
-    def __init__(self, data_set_dir: str, transform=None):
+    def __init__(self, data_set_dir: str, transform=None, alphabet='russian'):
         self.data = np.load(os.path.join(data_set_dir, 'data.npy'))
         self.labels = np.load(os.path.join(data_set_dir, 'labels.npy'))
         self.transform = transform
-        self.encoder_decoder = LabelEncoderDecoder()
+        self.encoder_decoder = LabelEncoderDecoder(alphabet=alphabet)
 
     def __len__(self):
         return len(self.labels)

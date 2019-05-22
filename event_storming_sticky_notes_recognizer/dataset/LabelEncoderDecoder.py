@@ -1,17 +1,34 @@
 import numpy as np
 from numpy import ndarray
 
+from event_storming_sticky_notes_recognizer.Exception import UnsupportedParamException
+
 
 class LabelEncoderDecoder:
-    def __init__(self, max_word_len=16):
+    def __init__(self, alphabet: str, max_word_len=16):
         self.length = max_word_len
-        self.alphabet = ['a', 'b', 'c', 'd',
-                         'e', 'f', 'g', 'h',
-                         'i', 'j', 'k', 'l',
-                         'm', 'n', 'o', 'p',
-                         'q', 'r', 's', 't',
-                         'u', 'v', 'w', 'x',
-                         'y', 'z']
+        self.alphabet = self.get_alphabet(alphabet_name=alphabet)
+
+    @staticmethod
+    def get_alphabet(alphabet_name: str) -> list:
+        if alphabet_name == 'english':
+            return ['a', 'b', 'c', 'd',
+                    'e', 'f', 'g', 'h',
+                    'i', 'j', 'k', 'l',
+                    'm', 'n', 'o', 'p',
+                    'q', 'r', 's', 't',
+                    'u', 'v', 'w', 'x',
+                    'y', 'z']
+        elif alphabet_name == 'russian':
+            return ['а', 'б', 'в', 'г', 'д',
+                    'е', 'ж', 'з', 'и', 'й',
+                    'к', 'л', 'м', 'н', 'о',
+                    'п', 'р', 'с', 'т', 'у',
+                    'ф', 'х', 'ц', 'ч', 'ш',
+                    'щ', 'ъ', 'ы', 'ь', 'э',
+                    'ю', 'я']
+        else:
+            raise UnsupportedParamException('Alphabet ' + alphabet_name + ' is not supported.')
 
     def encode_character(self, character: str) -> int:
         assert len(character) == 1

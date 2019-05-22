@@ -63,20 +63,21 @@ def run(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Converts template with handwritten letters into letter images.')
-    parser.add_argument('--min_letter_width', type=int, help='Minimal width of a letter on image.', default=400)
-    parser.add_argument('--max_letter_width', type=int, help='Maximal width of a letter on image.', default=800)
+    parser.add_argument('--min_letter_width', type=int, help='Minimal width of a letter on image.', default=50)
+    parser.add_argument('--max_letter_width', type=int, help='Maximal width of a letter on image.', default=400)
 
-    parser.add_argument('--min_letter_height', type=int, help='Minimal height of a letter on image.', default=400)
-    parser.add_argument('--max_letter_height', type=int, help='Maximal height of a letter on image.', default=800)
+    parser.add_argument('--min_letter_height', type=int, help='Minimal height of a letter on image.', default=50)
+    parser.add_argument('--max_letter_height', type=int, help='Maximal height of a letter on image.', default=200)
 
     parser.add_argument('--thresh', type=int, help='Thresh value used to convert image into binary form.',
                         default=128)
 
     parser.add_argument('--directory', type=str,
                         help='directory with marker and pen folders containing template images with letters.',
-                        default=r'C:\Users\heorhii.berezovskyi\Documents\letters')
+                        default=r'D:\handwritten_words')
     parser.add_argument('--write_to', type=str, help='Directory to save letters.',
-                        default=r'C:\Users\heorhii.berezovskyi\Documents\LettersDataset')
+                        default=r'D:\handwritten_words\dataset')
 
     _args = parser.parse_args()
     run(_args)
+

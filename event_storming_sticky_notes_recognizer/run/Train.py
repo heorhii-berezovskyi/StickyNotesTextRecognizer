@@ -43,7 +43,7 @@ def run(args):
     train_dataset_folder_names = os.listdir(args.train_dataset_dir)
     # test_dataset_folder_names = os.listdir(args.test_dataset_dir)
 
-    epoch_from = 9
+    epoch_from = 1
     epoch_to = args.epochs + 9
     # test_losses = []
     # test_accuracies = []
@@ -97,20 +97,20 @@ def run(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Trains specified model with specified parameters.')
 
-    parser.add_argument('--train_dataset_dir', type=str, default=r'D:\words\train',
+    parser.add_argument('--train_dataset_dir', type=str, default=r'D:\russian_words\train',
                         help='Directory with folders containing data and labels in .npy format.')
     parser.add_argument('--test_dataset_dir', type=str, default=r'D:\words\test',
                         help='Directory with folders containing data and labels in .npy format.')
 
     parser.add_argument('--image_height', type=int, default=64, help='Height of input images.')
     parser.add_argument('--num_of_channels', type=int, default=1, help='Number of channels in input images.')
-    parser.add_argument('--num_of_classes', type=int, default=27, help='Number of classes including blank character.')
+    parser.add_argument('--num_of_classes', type=int, default=33, help='Number of classes including blank character.')
     parser.add_argument('--num_of_lstm_hidden_units', type=int, default=256)
 
     parser.add_argument('--batch_size', type=int, default=64, help='input batch size for training')
-    parser.add_argument('--test_batch_size', type=int, default=512, metavar='N',
+    parser.add_argument('--test_batch_size', type=int, default=128, metavar='N',
                         help='input batch size for testing')
-    parser.add_argument('--epochs', type=int, default=1,
+    parser.add_argument('--epochs', type=int, default=100,
                         help='number of epochs to train')
     parser.add_argument('--lr', type=float, default=0.001,
                         help='learning rate')
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     parser.add_argument('--test_acc', default=r'D:\words\test_accuracies',
                         help='Path to dump test accuracies')
 
-    parser.add_argument('--pretrained', default=r'D:\words\models\crnn8.pt',
+    parser.add_argument('--pretrained', default='',
                         help='Path to a pretrained model weights.')
     _args = parser.parse_args()
     run(args=_args)

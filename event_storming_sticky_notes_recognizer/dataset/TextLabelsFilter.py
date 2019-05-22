@@ -7,7 +7,7 @@ class TextLabelsFilter:
         self.length = filter_length
 
     def load_text_labels(self) -> list:
-        with open(self.path) as f:
+        with open(self.path, encoding='utf-8') as f:
             result = f.readlines()
         return result
 
@@ -18,7 +18,7 @@ class TextLabelsFilter:
 
     @staticmethod
     def save(labels: list, to: str):
-        with open(to, 'w') as f:
+        with open(to, 'w', encoding='utf-8') as f:
             for item in labels:
                 f.write("%s\n" % item)
 
@@ -34,14 +34,25 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Removes whitespaces and words which are longer than specified length.')
     parser.add_argument('--labels_to_filter', type=str, help='Path to labels to filter.',
-                        default=r'C:\Users\heorhii.berezovskyi\Documents\corpus\google-10000-english.txt')
+                        default=r'D:\russian_words_corpus\russian_unicode.txt')
 
     parser.add_argument('--filter_length', type=int, help='Maximal valid word length.',
-                        default=16)
+                        default=13)
 
     parser.add_argument('--write_to', type=str, help='Path to save the results.',
-                        default=r'C:\Users\heorhii.berezovskyi\Documents\words\words.txt')
+                        default=r'D:\russian_words_corpus\russian_unicode_filtered.txt')
 
     _args = parser.parse_args()
 
     run(_args)
+
+    # fp = open(r'D:\russian_words_corpus\russian.txt', "r", encoding='Windows-1251')
+    # with open(r'D:\russian_words_corpus\russian_unicode_filtered.txt', 'w', encoding='utf-8') as f:
+    #     for item in fp:
+    #         f.write(item)
+
+    # fp = open(r'D:\russian_words_corpus\russian_unicode_filtered.txt', "r", encoding='utf-8')
+    # for f in fp:
+    #     print(f)
+
+

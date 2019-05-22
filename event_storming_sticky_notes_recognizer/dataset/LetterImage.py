@@ -6,6 +6,7 @@ import numpy as np
 from numpy import ndarray
 
 from event_storming_sticky_notes_recognizer.dataset.FileUtils import get_list_of_files
+from event_storming_sticky_notes_recognizer.dataset.LabelEncoderDecoder import LabelEncoderDecoder
 
 
 class LetterImage:
@@ -22,10 +23,11 @@ class LetterImage:
         img_bin[:, -dirty_frame_size:] = 0
         return LetterImage(image=img_bin)
 
-    def save(self, to: str):
+    def save(self, to: str, name: str):
         if not os.path.exists(to):
             os.makedirs(to, exist_ok=True)
-        cv2.imwrite(to, self.letter)
+        path = os.path.join(to, name)
+        cv2.imwrite(path, self.letter)
 
     def extract_roi(self, min_piece_area: int):
         letter = self.letter
@@ -49,34 +51,81 @@ class LetterImage:
         closing = cv2.morphologyEx(letter, cv2.MORPH_CLOSE, kernel)
         return LetterImage(image=closing)
 
+    def deskew(self):
+        img = self.letter
+        m = cv2.moments(img)
+        if abs(m['mu02']) < 1e-2:
+            # no deskewing needed.
+            return LetterImage(image=img.copy())
+        # Calculate skew based on central momemts.
+        skew = m['mu11'] / m['mu02']
+        # Calculate affine transform to correct skewness.
+        M = np.float32([[1, skew, -0.5 * img.shape[0] * skew], [0, 1, 0]])
+        # Apply affine transform
+        img = cv2.warpAffine(img, M, img.shape, flags=cv2.WARP_INVERSE_MAP | cv2.INTER_LINEAR)
+        return LetterImage(image=img)
+
 
 def run(args):
     subdirs = os.listdir(args.directory)
 
     for dir in subdirs:
-        if dir == 'marker' or dir == 'pen':
-            subfolders = os.listdir(os.path.join(args.directory, dir))
-            for folder in subfolders:
-                folder_path = os.path.join(args.directory, dir, folder)
-                image_paths = get_list_of_files(folder=folder_path)
+        subfolders = os.listdir(os.path.join(args.directory, dir))
+        for folder in subfolders:
+            folder_path = os.path.join(args.directory, dir, folder)
+            image_paths = get_list_of_files(folder=folder_path)
 
-                for path in image_paths:
-                    letter = LetterImage(image=cv2.imread(path, cv2.IMREAD_GRAYSCALE))
-                    binary_letter = letter.to_binary(thresh_value=args.thresh,
-                                                     dirty_frame_size=args.frame_size)
-                    closed_letter = binary_letter.with_morph_closing(kernel_size=args.kernel_size)
-                    roi = closed_letter.extract_roi(min_piece_area=args.min_area)
-                    roi.save(to=path)
+            for path in image_paths:
+                letter = LetterImage(image=cv2.imread(path, cv2.IMREAD_GRAYSCALE))
+                binary_letter = letter.to_binary(thresh_value=args.thresh,
+                                                 dirty_frame_size=args.frame_size)
+                closed_letter = binary_letter.with_morph_closing(kernel_size=args.kernel_size)
+                roi = closed_letter.extract_roi(min_piece_area=args.min_area)
+                roi.save(to=path, name='')
+
+
+def run_russian(args):
+    encoder_decoder = LabelEncoderDecoder(alphabet='russian')
+
+    subdirs = os.listdir(args.directory)
+    print(subdirs)
+    print(len(subdirs))
+
+    for dir in subdirs:
+        dir_path = os.path.join(args.directory, dir)
+        image_paths = get_list_of_files(folder=dir_path)
+        i = 0
+        for path in image_paths:
+            stream = open(path, 'rb')
+            bytes = bytearray(stream.read())
+            array_path = np.asarray(bytes, dtype=np.uint8)
+            letter = LetterImage(image=cv2.imdecode(array_path, cv2.IMREAD_GRAYSCALE))
+            binary_letter = letter.to_binary(thresh_value=args.thresh,
+                                             dirty_frame_size=args.frame_size)
+            closed_letter = binary_letter.with_morph_closing(kernel_size=args.kernel_size)
+            skewed_letter = closed_letter.deskew()
+            roi = skewed_letter.extract_roi(min_piece_area=args.min_area)
+            try:
+                save_path = os.path.join(args.save_dir, str(encoder_decoder.encode_character(character=dir)))
+                save_name = str(i) + '.png'
+                roi.save(to=save_path, name=save_name)
+            except:
+                print(dir)
+            i += 1
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Converts letters images into EMNIST format.')
     parser.add_argument('--directory', type=str,
                         help='Directory with marker and pen folders containing letters images to convert.',
-                        default=r'C:\Users\heorhii.berezovskyi\Documents\LettersDataset')
+                        default=r'D:\russian_characters\experiment\small')
+
+    parser.add_argument('--save_dir', type=str,
+                        help='Directory to save russian letters.',
+                        default=r'D:\russian_characters\experiment\small_roi')
 
     parser.add_argument('--thresh', type=int, help='Thresh value used to convert image into binary form.',
-                        default=180)
+                        default=128)
 
     parser.add_argument('--frame_size', type=int, help='Letter frame size to clear.',
                         default=9)
@@ -87,4 +136,5 @@ if __name__ == "__main__":
     parser.add_argument('--min_area', type=int, help='Minimal acceptable area of a roi piece.',
                         default=125)
     _args = parser.parse_args()
-    run(_args)
+    # run(_args)
+    run_russian(_args)
