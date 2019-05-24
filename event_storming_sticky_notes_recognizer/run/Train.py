@@ -1,14 +1,20 @@
 import argparse
 import os
-from random import shuffle
 
 import numpy as np
 import torch
+from matplotlib import pyplot as plt
 from torch import nn
 from torch import optim
+from torch.nn import CTCLoss
 from torch.utils.data import DataLoader
+from torchvision import transforms
 
-from event_storming_sticky_notes_recognizer.dataset.WordsDataset import WordsDataset
+from event_storming_sticky_notes_recognizer.dataset.TestWordsDataset import TestWordsDataset
+from event_storming_sticky_notes_recognizer.dataset.TrainWordsDataset import TrainWordsDataset
+from event_storming_sticky_notes_recognizer.dataset.transforms.Erode import Erode
+from event_storming_sticky_notes_recognizer.dataset.transforms.Rotate import Rotate
+from event_storming_sticky_notes_recognizer.dataset.transforms.Shear import Shear
 from event_storming_sticky_notes_recognizer.dataset.transforms.ToFloatTensor import ToFloatTensor
 from event_storming_sticky_notes_recognizer.model.Trainer import Trainer
 from event_storming_sticky_notes_recognizer.run.models.crnn import CRNN
@@ -29,6 +35,9 @@ def run(args):
                  num_of_classes=args.num_of_classes,
                  num_of_lstm_hidden_units=args.num_of_lstm_hidden_units)
 
+    if torch.cuda.is_available() and not args.cuda:
+        print("WARNING: You have a CUDA device, so you should probably run with --cuda")
+
     if args.pretrained != '':
         print('loading pretrained model from %s' % args.pretrained)
         model.load_state_dict(torch.load(args.pretrained))
@@ -39,59 +48,78 @@ def run(args):
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
     trainer = Trainer()
+    criterion = CTCLoss(zero_infinity=True, reduction='mean')
+    if args.cuda:
+        model.cuda()
+        model = torch.nn.DataParallel(model, device_ids=range(args.ngpu))
+        criterion = criterion.cuda()
 
-    train_dataset_folder_names = os.listdir(args.train_dataset_dir)
-    # test_dataset_folder_names = os.listdir(args.test_dataset_dir)
+    for epoch in range(1, args.epochs + 1):
+        test_losses = []
+        if epoch % 5 == 0:
+            for i in range(50):
+                test_dataset = TestWordsDataset(data_set_dir=args.test_dataset_dir,
+                                                transform=ToFloatTensor())
 
-    epoch_from = 1
-    epoch_to = args.epochs + 9
-    # test_losses = []
-    # test_accuracies = []
-    shuffle(train_dataset_folder_names)
-    for train_folder_name in train_dataset_folder_names:
-        train_path = os.path.join(args.train_dataset_dir, train_folder_name)
+                test_loader = DataLoader(dataset=test_dataset,
+                                         batch_size=args.test_batch_size,
+                                         shuffle=False,
+                                         num_workers=4)
 
-        train_dataset = WordsDataset(data_set_dir=train_path,
-                                     transform=ToFloatTensor())
+                test_loss, test_accuracy = trainer.test(criterion=criterion,
+                                                        model=model,
+                                                        test_loader=test_loader)
+                test_losses.append(test_loss)
+            test_losses_path = os.path.join(args.test_loss, 'losses.npy')
+            try:
+                losses_file = list(np.load(test_losses_path))
+                np.save(test_losses_path, np.asarray(losses_file + [np.mean(test_losses)]))
+            except FileNotFoundError:
+                np.save(test_losses_path, np.asarray([np.mean(test_losses)]))
+            print('Test Loss:', np.mean(test_losses))
+
+        train_dataset = TrainWordsDataset(data_set_dir=args.train_dataset_dir,
+                                          transform=transforms.Compose([Shear(),
+                                                                        Erode(),
+                                                                        Rotate(),
+                                                                        ToFloatTensor()]))
 
         train_loader = DataLoader(dataset=train_dataset,
                                   batch_size=args.batch_size,
                                   shuffle=True,
                                   num_workers=4)
+        losses = trainer.train(args=args,
+                               criterion=criterion,
+                               model=model,
+                               train_loader=train_loader,
+                               optimizer=optimizer,
+                               epoch=epoch)
 
-        for epoch in range(epoch_from, epoch_to):
-            losses = trainer.train(args=args,
-                                   model=model,
-                                   train_loader=train_loader,
-                                   optimizer=optimizer,
-                                   epoch=epoch)
-            np.save(os.path.join(args.train_loss, 'train_losses' + str(epoch) + '.npy'), np.asarray(losses))
+        train_losses_path = os.path.join(args.train_loss, 'losses.npy')
+        try:
+            losses_file = list(np.load(train_losses_path))
+            np.save(train_losses_path, np.asarray(losses_file + losses))
+        except FileNotFoundError:
+            np.save(train_losses_path, np.asarray(losses))
 
-            if args.save_model != '':
-                torch.save(model.state_dict(),
-                           os.path.join(args.save_model, 'crnn' + str(epoch) + '.pt'))
+        if args.save_model != '':
+            torch.save(model.state_dict(),
+                       os.path.join(args.save_model, 'crnn' + str(epoch) + '.pt'))
 
-        # for test_folder_name in test_dataset_folder_names:
-        #     test_path = os.path.join(args.test_dataset_dir, test_folder_name)
-        #     test_dataset = WordsDataset(data_set_dir=test_path,
-        #                                 transform=ToFloatTensor())
-        #
-        #     test_loader = DataLoader(dataset=test_dataset,
-        #                              batch_size=args.test_batch_size,
-        #                              shuffle=False,
-        #                              num_workers=4)
-        #
-        #     test_loss, test_accuracy = trainer.test(model=model,
-        #                                             test_loader=test_loader)
-        #     test_losses.append(test_loss)
-        #     test_accuracies.append(test_accuracy)
-        #     np.save(os.path.join(args.test_loss, 'test_losses' + str(epoch_to) + '.npy'),
-        #             np.asarray(test_losses))
-        #     np.save(os.path.join(args.test_acc, 'test_accuracies' + str(epoch_to) + '.npy'),
-        #             np.asarray(test_accuracies))
 
-        epoch_from += args.epochs
-        epoch_to += args.epochs
+def running_mean(x, N):
+    cumsum = np.cumsum(np.insert(x, 0, 0))
+    return (cumsum[N:] - cumsum[:-N]) / float(N)
+
+
+def plot_losses(args):
+    losses = np.load(os.path.join(args.train_loss), 'losses.npy')
+    r_mean = running_mean(losses, 20)
+
+    plt.ylim(0, 0.5)
+    plt.plot(losses)
+    plt.plot(r_mean)
+    plt.show()
 
 
 if __name__ == "__main__":
@@ -99,38 +127,40 @@ if __name__ == "__main__":
 
     parser.add_argument('--train_dataset_dir', type=str, default=r'D:\russian_words\train',
                         help='Directory with folders containing data and labels in .npy format.')
-    parser.add_argument('--test_dataset_dir', type=str, default=r'D:\words\test',
+    parser.add_argument('--test_dataset_dir', type=str, default=r'D:\russian_words\real\outputs',
                         help='Directory with folders containing data and labels in .npy format.')
 
     parser.add_argument('--image_height', type=int, default=64, help='Height of input images.')
-    parser.add_argument('--num_of_channels', type=int, default=1, help='Number of channels in input images.')
+    parser.add_argument('--num_of_channels', type=int, default=3, help='Number of channels in input images.')
     parser.add_argument('--num_of_classes', type=int, default=33, help='Number of classes including blank character.')
     parser.add_argument('--num_of_lstm_hidden_units', type=int, default=256)
 
     parser.add_argument('--batch_size', type=int, default=64, help='input batch size for training')
-    parser.add_argument('--test_batch_size', type=int, default=128, metavar='N',
+    parser.add_argument('--test_batch_size', type=int, default=2, metavar='N',
                         help='input batch size for testing')
-    parser.add_argument('--epochs', type=int, default=100,
+    parser.add_argument('--epochs', type=int, default=300,
                         help='number of epochs to train')
-    parser.add_argument('--lr', type=float, default=0.001,
+    parser.add_argument('--lr', type=float, default=0.0005,
                         help='learning rate')
 
     parser.add_argument('--log_interval', type=int, default=1,
                         help='how many batches to wait before logging training status')
-    parser.add_argument('--save_model', default=r'D:\words\models',
+    parser.add_argument('--save_model', default=r'D:\russian_words\models',
                         help='Path to save the model')
 
-    parser.add_argument('--train_loss', default=r'D:\words\train_losses',
+    parser.add_argument('--train_loss', default=r'D:\russian_words\train_losses',
                         help='Path to dump train losses')
 
-    parser.add_argument('--test_loss', default=r'D:\words\test_losses',
+    parser.add_argument('--test_loss', default=r'D:\russian_words\test_losses',
                         help='Path to dump test losses')
 
-    parser.add_argument('--test_acc', default=r'D:\words\test_accuracies',
+    parser.add_argument('--test_acc', default=r'D:\russian_words\test_accuracies',
                         help='Path to dump test accuracies')
 
-    parser.add_argument('--pretrained', default='',
+    parser.add_argument('--cuda', default=False,
+                        help='Whether to enable training on gpu.')
+
+    parser.add_argument('--pretrained', default=r'D:\russian_words\models\crnn0.pt',
                         help='Path to a pretrained model weights.')
     _args = parser.parse_args()
     run(args=_args)
-

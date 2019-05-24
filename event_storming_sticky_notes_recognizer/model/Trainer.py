@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-import torch.nn.functional as F
 from torch.autograd import Variable
 
 from event_storming_sticky_notes_recognizer.Name import Name
@@ -9,21 +8,23 @@ from event_storming_sticky_notes_recognizer.dataset.LabelEncoderDecoder import L
 
 class Trainer:
     @staticmethod
-    def train(args, model, train_loader, optimizer, epoch) -> list:
+    def train(args, criterion, model, train_loader, optimizer, epoch) -> list:
+        for p in model.parameters():
+            p.requires_grad = True
         model.train()
         losses = []
         # for batch_idx, (data, target) in enumerate(train_loader):
         for batch_idx, sample in enumerate(train_loader):
             optimizer.zero_grad()
-            data, target, target_lens = sample[Name.IMAGE.value], sample[Name.LABEL.value], sample[Name.LABEL_LEN.value]
+            data, targets, target_lens = sample[Name.IMAGE.value], sample[Name.LABEL.value], sample[
+                Name.LABEL_LEN.value]
             log_probs = model(data)
-            preds_size = Variable(torch.IntTensor([log_probs.size(0)] * log_probs.shape[1]))
-            loss = F.ctc_loss(log_probs=log_probs,
-                              targets=target,
-                              input_lengths=preds_size,
-                              target_lengths=target_lens,
-                              reduction='mean',
-                              zero_infinity=True)
+            preds_size = Variable(torch.tensor([log_probs.size(0)] * log_probs.shape[1], dtype=torch.int32))
+            targets = concat_targets(targets=targets, target_lengths=target_lens)
+            loss = criterion(log_probs=log_probs,
+                             targets=targets,
+                             input_lengths=preds_size,
+                             target_lengths=target_lens)
             losses.append(loss.item())
             loss.backward()
             optimizer.step()
@@ -38,23 +39,22 @@ class Trainer:
         return losses
 
     @staticmethod
-    def test(model, test_loader) -> (float, float):
+    def test(criterion, model, test_loader) -> (float, float):
         model.eval()
         test_loss = 0
         correct = 0
-        encoder_decoder = LabelEncoderDecoder()
+        encoder_decoder = LabelEncoderDecoder(alphabet='russian')
         with torch.no_grad():
             for sample in test_loader:
                 data, targets, target_lens = sample[Name.IMAGE.value], sample[Name.LABEL.value], sample[
                     Name.LABEL_LEN.value]
                 log_probs = model(data)
-                preds_size = Variable(torch.IntTensor([log_probs.size(0)] * log_probs.shape[1]))
-                test_loss += F.ctc_loss(log_probs=log_probs,
-                                        targets=targets,
-                                        input_lengths=preds_size,
-                                        target_lengths=target_lens,
-                                        reduction='mean',
-                                        zero_infinity=True).item()  # sum up batch loss
+                preds_size = Variable(torch.tensor([log_probs.size(0)] * log_probs.shape[1], dtype=torch.int32))
+                targets = concat_targets(targets=targets, target_lengths=target_lens)
+                test_loss += criterion(log_probs=log_probs,
+                                       targets=targets,
+                                       input_lengths=preds_size,
+                                       target_lengths=target_lens).item()  # sum up batch loss
 
                 _, probs = log_probs.max(2)
 
@@ -78,3 +78,12 @@ class Trainer:
                      )
               )
         return test_loss, 100. * correct / len(test_loader.dataset)
+
+
+def concat_targets(targets, target_lengths):
+    result = []
+    for target, target_len in zip(targets, target_lengths):
+        nonzero_taget = target[:target_len]
+        result.append(nonzero_taget)
+    result = np.hstack(result)
+    return torch.tensor(result, dtype=torch.int32)

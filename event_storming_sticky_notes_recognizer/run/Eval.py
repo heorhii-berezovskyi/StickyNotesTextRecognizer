@@ -3,15 +3,15 @@ import argparse
 import torch
 from torch.utils.data import DataLoader
 
-from event_storming_sticky_notes_recognizer.dataset.WordsDataset import WordsDataset
+from event_storming_sticky_notes_recognizer.dataset.TrainWordsDataset import TrainWordsDataset
 from event_storming_sticky_notes_recognizer.dataset.transforms.ToFloatTensor import ToFloatTensor
 from event_storming_sticky_notes_recognizer.model.Trainer import Trainer
 from event_storming_sticky_notes_recognizer.run.models.crnn import CRNN
 
 
 def run(args):
-    test_dataset = WordsDataset(data_set_dir=args.dataset_dir,
-                                transform=ToFloatTensor())
+    test_dataset = TrainWordsDataset(data_set_dir=args.dataset_dir,
+                                     transform=ToFloatTensor())
 
     test_loader = DataLoader(dataset=test_dataset,
                              batch_size=args.test_batch_size,

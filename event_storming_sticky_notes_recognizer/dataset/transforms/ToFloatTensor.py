@@ -8,6 +8,7 @@ class ToFloatTensor:
 
     def __call__(self, sample):
         image, label, label_len = sample[Name.IMAGE.value], sample[Name.LABEL.value], sample[Name.LABEL_LEN.value]
+
         return {Name.IMAGE.value: torch.tensor(image, dtype=torch.float32),
-                Name.LABEL.value: torch.tensor(label, dtype=torch.long),
-                Name.LABEL_LEN.value: torch.tensor(label_len, dtype=torch.long)}
+                Name.LABEL.value: torch.tensor(label, dtype=torch.int32),
+                Name.LABEL_LEN.value: torch.tensor(label_len, dtype=torch.int32)}

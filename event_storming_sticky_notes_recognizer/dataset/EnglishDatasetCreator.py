@@ -171,5 +171,5 @@ if __name__ == "__main__":
 
     _args = parser.parse_args()
 
-    run(_args)
+    # run(_args)
     run_labels_check(_args)

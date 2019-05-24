@@ -13,7 +13,9 @@ class TextLabelsFilter:
 
     def filter_by_length(self, labels: list) -> list:
         stripped = [w.strip() for w in labels]
-        filtered = filter(lambda x: (len(x) <= self.length), stripped)
+        filtered = filter(
+            lambda x: (len(x) <= self.length and 'ё' not in x and '-' not in x and '.' not in x and ' ' not in x),
+            stripped)
         return list(filtered)
 
     @staticmethod
@@ -37,7 +39,7 @@ if __name__ == "__main__":
                         default=r'D:\russian_words_corpus\russian_unicode.txt')
 
     parser.add_argument('--filter_length', type=int, help='Maximal valid word length.',
-                        default=13)
+                        default=10)
 
     parser.add_argument('--write_to', type=str, help='Path to save the results.',
                         default=r'D:\russian_words_corpus\russian_unicode_filtered.txt')
@@ -45,14 +47,3 @@ if __name__ == "__main__":
     _args = parser.parse_args()
 
     run(_args)
-
-    # fp = open(r'D:\russian_words_corpus\russian.txt', "r", encoding='Windows-1251')
-    # with open(r'D:\russian_words_corpus\russian_unicode_filtered.txt', 'w', encoding='utf-8') as f:
-    #     for item in fp:
-    #         f.write(item)
-
-    # fp = open(r'D:\russian_words_corpus\russian_unicode_filtered.txt', "r", encoding='utf-8')
-    # for f in fp:
-    #     print(f)
-
-

@@ -29,7 +29,7 @@ class LetterImage:
         path = os.path.join(to, name)
         cv2.imwrite(path, self.letter)
 
-    def extract_roi(self, min_piece_area: int):
+    def extract_roi(self, orig_image: ndarray, min_piece_area: int):
         letter = self.letter
         im2, contours, hierarchy = cv2.findContours(letter, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         min_x = min_y = max(letter.shape)
@@ -43,7 +43,7 @@ class LetterImage:
 
                 min_y = min(min_y, y)
                 max_y = max(max_y, y + h)
-        return LetterImage(image=letter[min_y:max_y, min_x:max_x])
+        return LetterImage(image=orig_image[min_y:max_y, min_x:max_x, :])
 
     def with_morph_closing(self, kernel_size: int):
         letter = self.letter
@@ -66,6 +66,13 @@ class LetterImage:
         return LetterImage(image=img)
 
 
+def findnth(haystack, needle, n):
+    parts = haystack.split(needle, n + 1)
+    if len(parts) <= n + 1:
+        return -1
+    return len(haystack) - len(parts[-1]) - len(needle)
+
+
 def run(args):
     subdirs = os.listdir(args.directory)
 
@@ -80,38 +87,41 @@ def run(args):
                 binary_letter = letter.to_binary(thresh_value=args.thresh,
                                                  dirty_frame_size=args.frame_size)
                 closed_letter = binary_letter.with_morph_closing(kernel_size=args.kernel_size)
-                roi = closed_letter.extract_roi(min_piece_area=args.min_area)
-                roi.save(to=path, name='')
+                # roi = closed_letter.extract_roi(min_piece_area=args.min_area)
+                closed_letter.save(to=path, name='')
 
 
 def run_russian(args):
     encoder_decoder = LabelEncoderDecoder(alphabet='russian')
-
     subdirs = os.listdir(args.directory)
-    print(subdirs)
-    print(len(subdirs))
 
     for dir in subdirs:
         dir_path = os.path.join(args.directory, dir)
-        image_paths = get_list_of_files(folder=dir_path)
-        i = 0
-        for path in image_paths:
+
+        image_names = os.listdir(dir_path)
+        for name in image_names:
+            path = os.path.join(dir_path, name)
             stream = open(path, 'rb')
             bytes = bytearray(stream.read())
             array_path = np.asarray(bytes, dtype=np.uint8)
-            letter = LetterImage(image=cv2.imdecode(array_path, cv2.IMREAD_GRAYSCALE))
+            image = cv2.imdecode(array_path, cv2.IMREAD_COLOR)
+            gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            letter = LetterImage(image=gray_image)
             binary_letter = letter.to_binary(thresh_value=args.thresh,
                                              dirty_frame_size=args.frame_size)
             closed_letter = binary_letter.with_morph_closing(kernel_size=args.kernel_size)
-            skewed_letter = closed_letter.deskew()
-            roi = skewed_letter.extract_roi(min_piece_area=args.min_area)
+            # de_skewed_letter = closed_letter.deskew()
+            roi = closed_letter.extract_roi(orig_image=image,
+                                            min_piece_area=args.min_area)
             try:
-                save_path = os.path.join(args.save_dir, str(encoder_decoder.encode_character(character=dir)))
-                save_name = str(i) + '.png'
-                roi.save(to=save_path, name=save_name)
+                author_id = int(name[:4])
+                save_path = os.path.join(args.save_dir,
+                                         str(encoder_decoder.encode_character(character=dir)),
+                                         str(author_id))
+                save_name = int(name[6 + 1: -4])
+                roi.save(to=save_path, name=str(save_name) + '.png')
             except:
                 print(dir)
-            i += 1
 
 
 if __name__ == "__main__":
