@@ -8,7 +8,7 @@ from event_storming_sticky_notes_recognizer.dataset.LabelEncoderDecoder import L
 
 class Trainer:
     @staticmethod
-    def train(args, criterion, model, train_loader, optimizer, epoch) -> list:
+    def train(args, criterion, model, train_loader, optimizer, epoch, train_image) -> list:
         for p in model.parameters():
             p.requires_grad = True
         model.train()
@@ -18,8 +18,13 @@ class Trainer:
             optimizer.zero_grad()
             data, targets, target_lens = sample[Name.IMAGE.value], sample[Name.LABEL.value], sample[
                 Name.LABEL_LEN.value]
-            log_probs = model(data)
+            loadData(train_image, data)
+            log_probs = model(train_image)
             preds_size = Variable(torch.tensor([log_probs.size(0)] * log_probs.shape[1], dtype=torch.int32))
+            print('Train targets shape:', targets.shape)
+            print('Train predictions size:', log_probs.shape)
+            print('Test target lens size:', target_lens.shape)
+            print()
             targets = concat_targets(targets=targets, target_lengths=target_lens)
             loss = criterion(log_probs=log_probs,
                              targets=targets,
@@ -39,7 +44,7 @@ class Trainer:
         return losses
 
     @staticmethod
-    def test(criterion, model, test_loader) -> (float, float):
+    def test(criterion, model, test_loader, test_image) -> (float, float):
         model.eval()
         test_loss = 0
         correct = 0
@@ -48,9 +53,15 @@ class Trainer:
             for sample in test_loader:
                 data, targets, target_lens = sample[Name.IMAGE.value], sample[Name.LABEL.value], sample[
                     Name.LABEL_LEN.value]
-                log_probs = model(data)
+                loadData(test_image, data)
+                log_probs = model(test_image)
+
                 preds_size = Variable(torch.tensor([log_probs.size(0)] * log_probs.shape[1], dtype=torch.int32))
                 targets = concat_targets(targets=targets, target_lengths=target_lens)
+                print('Test targets shape', targets.shape)
+                print('Test predictions size:', log_probs.shape)
+                print('Test target lens size:', target_lens.shape)
+                print()
                 test_loss += criterion(log_probs=log_probs,
                                        targets=targets,
                                        input_lengths=preds_size,
@@ -87,3 +98,7 @@ def concat_targets(targets, target_lengths):
         result.append(nonzero_taget)
     result = np.hstack(result)
     return torch.tensor(result, dtype=torch.int32)
+
+
+def loadData(v, data):
+    v.data.resize_(data.size()).copy_(data)

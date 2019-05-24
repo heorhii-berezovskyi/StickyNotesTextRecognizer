@@ -6,6 +6,7 @@ import torch
 from matplotlib import pyplot as plt
 from torch import nn
 from torch import optim
+from torch.autograd import Variable
 from torch.nn import CTCLoss
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -48,11 +49,20 @@ def run(args):
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
     trainer = Trainer()
-    criterion = CTCLoss(zero_infinity=True, reduction='mean')
+    criterion = CTCLoss(reduction='mean')
+
+    train_image = torch.FloatTensor(args.batch_size, 3, args.image_height, 512)
+    test_image = torch.FloatTensor(args.test_batch_size, 3, args.image_height, 512)
+
     if args.cuda:
         model.cuda()
         model = torch.nn.DataParallel(model, device_ids=range(args.ngpu))
+        train_image = train_image.cuda()
+        test_image = test_image.cuda()
         criterion = criterion.cuda()
+
+    train_image = Variable(train_image)
+    test_image = Variable(test_image)
 
     for epoch in range(1, args.epochs + 1):
         test_losses = []
@@ -68,7 +78,8 @@ def run(args):
 
                 test_loss, test_accuracy = trainer.test(criterion=criterion,
                                                         model=model,
-                                                        test_loader=test_loader)
+                                                        test_loader=test_loader,
+                                                        test_image=test_image)
                 test_losses.append(test_loss)
             test_losses_path = os.path.join(args.test_loss, 'losses.npy')
             try:
@@ -93,7 +104,8 @@ def run(args):
                                model=model,
                                train_loader=train_loader,
                                optimizer=optimizer,
-                               epoch=epoch)
+                               epoch=epoch,
+                               train_image=train_image)
 
         train_losses_path = os.path.join(args.train_loss, 'losses.npy')
         try:
@@ -138,12 +150,12 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, default=64, help='input batch size for training')
     parser.add_argument('--test_batch_size', type=int, default=2, metavar='N',
                         help='input batch size for testing')
-    parser.add_argument('--epochs', type=int, default=300,
+    parser.add_argument('--epochs', type=int, default=3000,
                         help='number of epochs to train')
     parser.add_argument('--lr', type=float, default=0.0005,
                         help='learning rate')
 
-    parser.add_argument('--log_interval', type=int, default=1,
+    parser.add_argument('--log_interval', type=int, default=10,
                         help='how many batches to wait before logging training status')
     parser.add_argument('--save_model', default=r'D:\russian_words\models',
                         help='Path to save the model')
@@ -162,5 +174,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--pretrained', default=r'D:\russian_words\models\crnn0.pt',
                         help='Path to a pretrained model weights.')
+
+    parser.add_argument('--ngpu', default=4, type=int)
     _args = parser.parse_args()
     run(args=_args)
