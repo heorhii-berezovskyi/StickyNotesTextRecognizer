@@ -31,6 +31,14 @@ def weights_init(m):
         m.bias.data.fill_(0)
 
 
+def cut_state_dict_names(state_dict):
+    new_state_dict = {}
+    for k, v in state_dict.items():
+        name = k[7:]  # remove `module.`
+        new_state_dict[name] = v
+    return new_state_dict
+
+
 def run(args):
     model = CRNN(image_height=args.image_height,
                  num_of_channels=args.num_of_channels,
@@ -49,8 +57,13 @@ def run(args):
         if 'optimizer' in state:
             optimizer_state = state['optimizer']
             optimizer.load_state_dict(optimizer_state)
-            model.load_state_dict(state['state_dict'])
+            model_state = state['state_dict']
+            if args.cut_load_name:
+                model_state = cut_state_dict_names(state_dict=model_state)
+            model.load_state_dict(model_state)
         else:
+            if args.cut_load_name:
+                state = cut_state_dict_names(state_dict=state)
             model.load_state_dict(state)
     else:
         model.apply(weights_init)
@@ -185,7 +198,7 @@ if __name__ == "__main__":
     parser.add_argument('--train_dataset_dir', type=str, default=r'D:\russian_words\train',
                         help='Directory with folders containing data and labels in .npy format.')
 
-    parser.add_argument('--test_dataset_path', type=str, default=r'D:\russian_words\real\outputs\1.json',
+    parser.add_argument('--test_dataset_path', type=str, default=r'D:\russian_words\real\1',
                         help='Directory with folders containing data and labels in .npy format.')
 
     parser.add_argument('--image_height', type=int, default=64, help='Height of input images.')
@@ -223,6 +236,9 @@ if __name__ == "__main__":
 
     parser.add_argument('--pretrained', default=r'D:\russian_words\models\crnn1.pt',
                         help='Path to a pretrained model weights.')
+
+    parser.add_argument('--cut_load_name', default=False,
+                        help='Whether to cut load name up to 7 symbols.')
 
     parser.add_argument('--ngpu', default=1, type=int)
     _args = parser.parse_args()

@@ -11,7 +11,8 @@ from event_storming_sticky_notes_recognizer.dataset.LabelEncoderDecoder import L
 
 class TestWordsDataset(Dataset):
     def __init__(self, data_set_path: str, transform=None, alphabet='russian'):
-        self.data = self._load_file(path=data_set_path)
+        self.mapping = self._load_file(path=os.path.join(data_set_path, 'mapping.json'))
+        self.page = cv2.imread(os.path.join(data_set_path, 'page.tif'), cv2.IMREAD_COLOR)
         self.transform = transform
         self.encoder_decoder = LabelEncoderDecoder(alphabet=alphabet)
 
@@ -22,12 +23,10 @@ class TestWordsDataset(Dataset):
         return data
 
     def __len__(self):
-        return len(self.data['outputs']['object'])
+        return len(self.mapping['outputs']['object'])
 
     def __getitem__(self, idx):
-        page = cv2.imread(self.data['path'], cv2.IMREAD_COLOR)
-
-        data = self.data['outputs']['object']
+        data = self.mapping['outputs']['object']
         x_min = data[idx]['bndbox']['xmin']
         y_min = data[idx]['bndbox']['ymin']
         x_max = data[idx]['bndbox']['xmax']
@@ -36,7 +35,7 @@ class TestWordsDataset(Dataset):
         label = data[idx]['name']
         label = self.encoder_decoder.encode_word(word=label)
 
-        image = page[y_min: y_max, x_min: x_max, :]
+        image = self.page[y_min: y_max, x_min: x_max, :]
         image = image_resize(image, height=54)
 
         image_height = image.shape[0]
