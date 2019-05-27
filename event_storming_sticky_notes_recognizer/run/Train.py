@@ -175,7 +175,7 @@ if __name__ == "__main__":
     parser.add_argument('--cuda', default=False,
                         help='Whether to enable training on gpu.')
 
-    parser.add_argument('--pretrained', default=r'D:\russian_words\models\crnn0.pt',
+    parser.add_argument('--pretrained', default='',
                         help='Path to a pretrained model weights.')
 
     parser.add_argument('--ngpu', default=4, type=int)
