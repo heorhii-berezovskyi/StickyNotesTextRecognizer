@@ -8,19 +8,20 @@ from event_storming_sticky_notes_recognizer.Name import Name
 from event_storming_sticky_notes_recognizer.dataset.LabelEncoderDecoder import LabelEncoderDecoder
 
 
-class TrainWordsDataset(Dataset):
-    def __init__(self, data_set_dir: str, transform=None, alphabet='russian'):
+class WordsDataset(Dataset):
+    def __init__(self, data_set_dir: str, min_page_index: int, max_page_index: int, transform=None, alphabet='russian'):
         self.directory = data_set_dir
-        self.num_of_pages = len(os.listdir(data_set_dir))
+        self.min_page = min_page_index
+        self.max_page = max_page_index
+        self.folders = os.listdir(data_set_dir)[min_page_index: max_page_index]
         self.transform = transform
         self.encoder_decoder = LabelEncoderDecoder(alphabet=alphabet)
 
     def __len__(self):
-        return self.num_of_pages
+        return self.max_page - self.min_page
 
     def __getitem__(self, idx):
-        random_page_folder = np.random.randint(self.num_of_pages)
-        folder_path = os.path.join(self.directory, str(random_page_folder))
+        folder_path = os.path.join(self.directory, self.folders[idx])
         page = cv2.imread(os.path.join(folder_path, 'page.png'), cv2.IMREAD_COLOR)
         page_labels = np.load(os.path.join(folder_path, 'labels.npy'))
         random_word_index = np.random.randint(len(page_labels))
@@ -33,6 +34,7 @@ class TrainWordsDataset(Dataset):
         max_w = coords[3]
         image = np.ones((64, 512, 3), dtype=np.uint8) * 255
         image[:, :max_w - min_w, :] = page[min_h: max_h, min_w: max_w, :]
+
         image = image.transpose(2, 0, 1)
 
         sample = {Name.LABEL.value: label.astype(int),

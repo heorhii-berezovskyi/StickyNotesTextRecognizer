@@ -107,18 +107,15 @@ def run_test_synthetic(args):
     page = cv2.imread(os.path.join(path, 'page.png'), cv2.IMREAD_COLOR)
     label_data = np.load(os.path.join(path, 'labels.npy'))
     label_data = label_data[0]
-    word_label = label_data[:16]
     coords = label_data[16:]
     min_h = coords[0]
     max_h = coords[1]
     min_w = coords[2]
     max_w = coords[3]
     image = np.ones((64, 512, 3), dtype=np.uint8) * 255
-    # print(coords)
     image[:, :max_w - min_w, :] = page[min_h: max_h, min_w: max_w, :]
 
     coder = LabelEncoderDecoder(alphabet='russian')
-    print(coder.decode_word(word_label))
 
     cv2.imshow('img', image)
     cv2.waitKey(0)
@@ -133,8 +130,6 @@ def run_test_synthetic(args):
 
     preds = preds.transpose(1, 0).contiguous().view(-1)
 
-    print(preds)
-    print(coder.decode_word(array=preds))
     print(coder.decode_word(array=coder.from_raw_to_label(array=preds)))
 
 
@@ -144,7 +139,7 @@ if __name__ == "__main__":
                         default=r'D:\russian_words\models\crnn0.pt',
                         help='Path to a model weights in .pt file')
     parser.add_argument('--data_path', type=str,
-                        default=r'D:\russian_words\real\outputs\nabor-texta-3-2.json',
+                        default=r'D:\russian_words\train',
                         help='Path to an .npy file with images')
 
     parser.add_argument('--image_height', type=int, default=64,
@@ -163,5 +158,5 @@ if __name__ == "__main__":
                         help='Number of LSTM hidden units.')
 
     _args = parser.parse_args()
-    run_test_real(args=_args)
-    # run_test_synthetic(args=_args)
+    # run_test_real(args=_args)
+    run_test_synthetic(args=_args)

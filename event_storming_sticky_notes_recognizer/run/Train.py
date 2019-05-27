@@ -11,11 +11,11 @@ from torch.nn import CTCLoss
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-from event_storming_sticky_notes_recognizer.dataset.TestWordsDataset import TestWordsDataset
-from event_storming_sticky_notes_recognizer.dataset.TrainWordsDataset import TrainWordsDataset
+from event_storming_sticky_notes_recognizer.dataset.WordsDataset import WordsDataset
+from event_storming_sticky_notes_recognizer.dataset.transforms.GaussNoise import GaussNoise
+from event_storming_sticky_notes_recognizer.dataset.transforms.ApplyAveraging import ApplyAveraging
 from event_storming_sticky_notes_recognizer.dataset.transforms.Erode import Erode
 from event_storming_sticky_notes_recognizer.dataset.transforms.Rotate import Rotate
-from event_storming_sticky_notes_recognizer.dataset.transforms.Shear import Shear
 from event_storming_sticky_notes_recognizer.dataset.transforms.ToFloatTensor import ToFloatTensor
 from event_storming_sticky_notes_recognizer.model.Trainer import Trainer
 from event_storming_sticky_notes_recognizer.run.models.crnn import CRNN
@@ -46,10 +46,10 @@ def run(args):
         model.apply(weights_init)
     print(model)
 
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
 
     trainer = Trainer()
-    criterion = CTCLoss(reduction='mean')
+    criterion = CTCLoss(zero_infinity=True, reduction='mean')
 
     train_image = torch.FloatTensor(args.batch_size, 3, args.image_height, 512)
     test_image = torch.FloatTensor(args.test_batch_size, 3, args.image_height, 512)
@@ -64,41 +64,46 @@ def run(args):
     train_image = Variable(train_image)
     test_image = Variable(test_image)
 
+    test_dataset = WordsDataset(min_page_index=600,
+                                max_page_index=769,
+                                data_set_dir=args.dataset_dir,
+                                transform=transforms.Compose([ToFloatTensor()]))
+
+    test_loader = DataLoader(dataset=test_dataset,
+                             batch_size=args.test_batch_size,
+                             shuffle=False,
+                             num_workers=1)
+
+    train_dataset = WordsDataset(min_page_index=0,
+                                 max_page_index=600,
+                                 data_set_dir=args.dataset_dir,
+                                 transform=transforms.Compose([
+                                     Erode(),
+                                     Rotate(),
+                                     ApplyAveraging(),
+                                     GaussNoise(),
+                                     ToFloatTensor()
+                                 ]))
+
+    train_loader = DataLoader(dataset=train_dataset,
+                              batch_size=args.batch_size,
+                              shuffle=True,
+                              num_workers=1)
+
     for epoch in range(1, args.epochs + 1):
-        test_losses = []
         if epoch % 5 == 0:
-            for i in range(50):
-                test_dataset = TestWordsDataset(data_set_dir=args.test_dataset_dir,
-                                                transform=ToFloatTensor())
+            test_loss, test_accuracy = trainer.test(criterion=criterion,
+                                                    model=model,
+                                                    test_loader=test_loader,
+                                                    test_image=test_image)
 
-                test_loader = DataLoader(dataset=test_dataset,
-                                         batch_size=args.test_batch_size,
-                                         shuffle=False,
-                                         num_workers=4)
-
-                test_loss, test_accuracy = trainer.test(criterion=criterion,
-                                                        model=model,
-                                                        test_loader=test_loader,
-                                                        test_image=test_image)
-                test_losses.append(test_loss)
             test_losses_path = os.path.join(args.test_loss, 'losses.npy')
             try:
                 losses_file = list(np.load(test_losses_path))
-                np.save(test_losses_path, np.asarray(losses_file + [np.mean(test_losses)]))
+                np.save(test_losses_path, np.asarray(losses_file + [test_loss]))
             except FileNotFoundError:
-                np.save(test_losses_path, np.asarray([np.mean(test_losses)]))
-            print('Test Loss:', np.mean(test_losses))
+                np.save(test_losses_path, np.asarray([test_loss]))
 
-        train_dataset = TrainWordsDataset(data_set_dir=args.train_dataset_dir,
-                                          transform=transforms.Compose([Shear(),
-                                                                        Erode(),
-                                                                        Rotate(),
-                                                                        ToFloatTensor()]))
-
-        train_loader = DataLoader(dataset=train_dataset,
-                                  batch_size=args.batch_size,
-                                  shuffle=True,
-                                  num_workers=4)
         losses = trainer.train(args=args,
                                criterion=criterion,
                                model=model,
@@ -125,10 +130,10 @@ def running_mean(x, N):
 
 
 def plot_losses(args):
-    losses = np.load(os.path.join(args.train_loss), 'losses.npy')
+    losses = np.load(os.path.join(args.train_loss, 'losses.npy'))
     r_mean = running_mean(losses, 20)
 
-    plt.ylim(0, 0.5)
+    plt.ylim(0, 1)
     plt.plot(losses)
     plt.plot(r_mean)
     plt.show()
@@ -137,9 +142,7 @@ def plot_losses(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Trains specified model with specified parameters.')
 
-    parser.add_argument('--train_dataset_dir', type=str, default=r'D:\russian_words\train',
-                        help='Directory with folders containing data and labels in .npy format.')
-    parser.add_argument('--test_dataset_dir', type=str, default=r'D:\russian_words\real\outputs',
+    parser.add_argument('--dataset_dir', type=str, default=r'D:\russian_words\train',
                         help='Directory with folders containing data and labels in .npy format.')
 
     parser.add_argument('--image_height', type=int, default=64, help='Height of input images.')
@@ -147,15 +150,15 @@ if __name__ == "__main__":
     parser.add_argument('--num_of_classes', type=int, default=33, help='Number of classes including blank character.')
     parser.add_argument('--num_of_lstm_hidden_units', type=int, default=256)
 
-    parser.add_argument('--batch_size', type=int, default=64, help='input batch size for training')
-    parser.add_argument('--test_batch_size', type=int, default=2, metavar='N',
+    parser.add_argument('--batch_size', type=int, default=60, help='input batch size for training')
+    parser.add_argument('--test_batch_size', type=int, default=13, metavar='N',
                         help='input batch size for testing')
     parser.add_argument('--epochs', type=int, default=3000,
                         help='number of epochs to train')
     parser.add_argument('--lr', type=float, default=0.0005,
                         help='learning rate')
 
-    parser.add_argument('--log_interval', type=int, default=10,
+    parser.add_argument('--log_interval', type=int, default=1,
                         help='how many batches to wait before logging training status')
     parser.add_argument('--save_model', default=r'D:\russian_words\models',
                         help='Path to save the model')
@@ -178,3 +181,5 @@ if __name__ == "__main__":
     parser.add_argument('--ngpu', default=4, type=int)
     _args = parser.parse_args()
     run(args=_args)
+
+    # plot_losses(_args)

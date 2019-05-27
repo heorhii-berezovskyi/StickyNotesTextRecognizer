@@ -13,7 +13,6 @@ class Trainer:
             p.requires_grad = True
         model.train()
         losses = []
-        # for batch_idx, (data, target) in enumerate(train_loader):
         for batch_idx, sample in enumerate(train_loader):
             optimizer.zero_grad()
             data, targets, target_lens = sample[Name.IMAGE.value], sample[Name.LABEL.value], sample[
@@ -21,10 +20,7 @@ class Trainer:
             loadData(train_image, data)
             log_probs = model(train_image)
             preds_size = Variable(torch.tensor([log_probs.size(0)] * log_probs.shape[1], dtype=torch.int32))
-            print('Train targets shape:', targets.shape)
-            print('Train predictions size:', log_probs.shape)
-            print('Test target lens size:', target_lens.shape)
-            print()
+
             targets = concat_targets(targets=targets, target_lengths=target_lens)
             loss = criterion(log_probs=log_probs,
                              targets=targets,
@@ -58,10 +54,6 @@ class Trainer:
 
                 preds_size = Variable(torch.tensor([log_probs.size(0)] * log_probs.shape[1], dtype=torch.int32))
                 targets = concat_targets(targets=targets, target_lengths=target_lens)
-                print('Test targets shape', targets.shape)
-                print('Test predictions size:', log_probs.shape)
-                print('Test target lens size:', target_lens.shape)
-                print()
                 test_loss += criterion(log_probs=log_probs,
                                        targets=targets,
                                        input_lengths=preds_size,
@@ -72,10 +64,10 @@ class Trainer:
                 probs = probs.transpose(1, 0)
                 preds = []
                 for prob in probs:
-                    preds.append(encoder_decoder.from_raw_to_label(prob.numpy()))
+                    preds.append(encoder_decoder.from_raw_to_label(prob.cpu().numpy()))
                 preds = np.asarray(preds)
 
-                for pred, target in zip(preds, targets.numpy()):
+                for pred, target in zip(preds, targets.cpu().numpy()):
                     if np.array_equal(pred, target):
                         correct += 1
 
@@ -101,4 +93,4 @@ def concat_targets(targets, target_lengths):
 
 
 def loadData(v, data):
-    v.data.resize_(data.size()).copy_(data)
+    v.resize_(data.size()).copy_(data)

@@ -7,6 +7,8 @@ from event_storming_sticky_notes_recognizer.dataset.TrainWordsDataset import Tra
 from event_storming_sticky_notes_recognizer.dataset.transforms.ToFloatTensor import ToFloatTensor
 from event_storming_sticky_notes_recognizer.model.Trainer import Trainer
 from event_storming_sticky_notes_recognizer.run.models.crnn import CRNN
+from torch.nn import  CTCLoss
+from torch.autograd import Variable
 
 
 def run(args):
@@ -27,25 +29,29 @@ def run(args):
     print(model)
 
     trainer = Trainer()
+    criterion = CTCLoss(zero_infinity=True, reduction='mean')
 
-    trainer.test(model=model, test_loader=test_loader)
+    test_image = torch.FloatTensor(args.test_batch_size, 3, args.image_height, 512)
+    test_image = Variable(test_image)
+
+    trainer.test(model=model, test_loader=test_loader, criterion=criterion, test_image=test_image)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Trains specified model with specified parameters.')
 
-    parser.add_argument('--dataset_dir', type=str, default=r'C:\Users\heorhii.berezovskyi\Documents\words',
+    parser.add_argument('--dataset_dir', type=str, default=r'D:\russian_words\train',
                         help='Directory with dataset files train_labels.npy and train_data.npy.')
 
     parser.add_argument('--image_height', type=int, default=64, help='Height of input images.')
-    parser.add_argument('--num_of_channels', type=int, default=1, help='Number of channels in input images.')
-    parser.add_argument('--num_of_classes', type=int, default=27, help='Number of classes including blank character.')
+    parser.add_argument('--num_of_channels', type=int, default=3, help='Number of channels in input images.')
+    parser.add_argument('--num_of_classes', type=int, default=33, help='Number of classes including blank character.')
     parser.add_argument('--num_of_lstm_hidden_units', type=int, default=256)
 
-    parser.add_argument('--test_batch_size', type=int, default=512, metavar='N',
+    parser.add_argument('--test_batch_size', type=int, default=256, metavar='N',
                         help='input batch size for testing')
 
-    parser.add_argument('--snapshot', default=r'C:\Users\heorhii.berezovskyi\Documents\words\crnn151.pt',
+    parser.add_argument('--snapshot', default=r'D:\russian_words\models\crnn0.pt',
                         help='Path to a pretrained model weights.')
     _args = parser.parse_args()
     run(args=_args)
