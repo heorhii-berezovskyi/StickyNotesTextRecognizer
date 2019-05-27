@@ -37,17 +37,24 @@ def run(args):
                  num_of_classes=args.num_of_classes,
                  num_of_lstm_hidden_units=args.num_of_lstm_hidden_units)
 
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
+
     if torch.cuda.is_available() and not args.cuda:
         print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
     if args.pretrained != '':
         print('loading pretrained model from %s' % args.pretrained)
-        model.load_state_dict(torch.load(args.pretrained))
+
+        state = torch.load(args.pretrained, 'cuda' if args.cuda else 'cpu')
+        if 'optimizer' in state:
+            optimizer_state = state['optimizer']
+            optimizer.load_state_dict(optimizer_state)
+            model.load_state_dict(state['state_dict'])
+        else:
+            model.load_state_dict(state)
     else:
         model.apply(weights_init)
     print(model)
-
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
 
     trainer = Trainer()
     criterion = CTCLoss(zero_infinity=True, reduction='mean')
@@ -153,8 +160,8 @@ def run(args):
             np.save(train_losses_path, np.asarray(train_losses))
 
         if args.save_model != '':
-            torch.save(model.state_dict(),
-                       os.path.join(args.save_model, 'crnn' + str(epoch) + '.pt'))
+            state = {'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
+            torch.save(state, os.path.join(args.save_model, 'crnn' + str(epoch) + '.pt'))
 
 
 def running_mean(x, N):
@@ -214,10 +221,10 @@ if __name__ == "__main__":
     parser.add_argument('--cuda', default=False,
                         help='Whether to enable training on gpu.')
 
-    parser.add_argument('--pretrained', default='',
+    parser.add_argument('--pretrained', default=r'D:\russian_words\models\crnn1.pt',
                         help='Path to a pretrained model weights.')
 
-    parser.add_argument('--ngpu', default=4, type=int)
+    parser.add_argument('--ngpu', default=1, type=int)
     _args = parser.parse_args()
     run(args=_args)
 
