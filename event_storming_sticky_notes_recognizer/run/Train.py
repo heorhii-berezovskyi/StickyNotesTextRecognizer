@@ -11,10 +11,11 @@ from torch.nn import CTCLoss
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
+from event_storming_sticky_notes_recognizer.dataset.TestWordsDataset import TestWordsDataset
 from event_storming_sticky_notes_recognizer.dataset.WordsDataset import WordsDataset
-from event_storming_sticky_notes_recognizer.dataset.transforms.GaussNoise import GaussNoise
 from event_storming_sticky_notes_recognizer.dataset.transforms.ApplyAveraging import ApplyAveraging
 from event_storming_sticky_notes_recognizer.dataset.transforms.Erode import Erode
+from event_storming_sticky_notes_recognizer.dataset.transforms.GaussNoise import GaussNoise
 from event_storming_sticky_notes_recognizer.dataset.transforms.Rotate import Rotate
 from event_storming_sticky_notes_recognizer.dataset.transforms.ToFloatTensor import ToFloatTensor
 from event_storming_sticky_notes_recognizer.model.Trainer import Trainer
@@ -64,19 +65,19 @@ def run(args):
     train_image = Variable(train_image)
     test_image = Variable(test_image)
 
-    test_dataset = WordsDataset(min_page_index=600,
-                                max_page_index=769,
-                                data_set_dir=args.dataset_dir,
-                                transform=transforms.Compose([ToFloatTensor()]))
+    val_dataset = WordsDataset(min_page_index=600,
+                               max_page_index=769,
+                               data_set_dir=args.train_dataset_dir,
+                               transform=transforms.Compose([ToFloatTensor()]))
 
-    test_loader = DataLoader(dataset=test_dataset,
-                             batch_size=args.test_batch_size,
-                             shuffle=False,
-                             num_workers=1)
+    val_loader = DataLoader(dataset=val_dataset,
+                            batch_size=args.test_batch_size,
+                            shuffle=False,
+                            num_workers=1)
 
     train_dataset = WordsDataset(min_page_index=0,
                                  max_page_index=600,
-                                 data_set_dir=args.dataset_dir,
+                                 data_set_dir=args.train_dataset_dir,
                                  transform=transforms.Compose([
                                      Erode(),
                                      Rotate(),
@@ -88,36 +89,68 @@ def run(args):
     train_loader = DataLoader(dataset=train_dataset,
                               batch_size=args.batch_size,
                               shuffle=True,
-                              num_workers=1)
+                              num_workers=4)
+
+    test_dataset = TestWordsDataset(data_set_path=args.test_dataset_path,
+                                    transform=ToFloatTensor())
+
+    test_loader = DataLoader(dataset=test_dataset,
+                             batch_size=args.test_batch_size,
+                             shuffle=False,
+                             num_workers=1)
 
     for epoch in range(1, args.epochs + 1):
         if epoch % 5 == 0:
+            val_loss, val_accuracy = trainer.test(criterion=criterion,
+                                                  model=model,
+                                                  test_loader=val_loader,
+                                                  test_image=test_image)
+
+            print('\nValidation set: Average loss: {:.4f}, Accuracy: {:.4f}\n'.
+                  format(val_loss,
+                         val_accuracy
+                         )
+                  )
+
+            val_losses_path = os.path.join(args.val_loss, 'losses.npy')
+            try:
+                val_losses_file = list(np.load(val_losses_path))
+                np.save(val_losses_path, np.asarray(val_losses_file + [val_loss]))
+            except FileNotFoundError:
+                np.save(val_losses_path, np.asarray([val_loss]))
+
             test_loss, test_accuracy = trainer.test(criterion=criterion,
                                                     model=model,
                                                     test_loader=test_loader,
                                                     test_image=test_image)
 
+            print('\nTest set: Average loss: {:.4f}, Accuracy: {:.4f}\n'.
+                  format(test_loss,
+                         test_accuracy
+                         )
+                  )
+
             test_losses_path = os.path.join(args.test_loss, 'losses.npy')
             try:
-                losses_file = list(np.load(test_losses_path))
-                np.save(test_losses_path, np.asarray(losses_file + [test_loss]))
+                test_losses_file = list(np.load(test_losses_path))
+                np.save(test_losses_path, np.asarray(test_losses_file + [test_loss]))
             except FileNotFoundError:
                 np.save(test_losses_path, np.asarray([test_loss]))
 
-        losses = trainer.train(args=args,
-                               criterion=criterion,
-                               model=model,
-                               train_loader=train_loader,
-                               optimizer=optimizer,
-                               epoch=epoch,
-                               train_image=train_image)
+        train_losses = trainer.train(args=args,
+                                     criterion=criterion,
+                                     model=model,
+                                     train_loader=train_loader,
+                                     optimizer=optimizer,
+                                     epoch=epoch,
+                                     train_image=train_image)
 
         train_losses_path = os.path.join(args.train_loss, 'losses.npy')
         try:
-            losses_file = list(np.load(train_losses_path))
-            np.save(train_losses_path, np.asarray(losses_file + losses))
+            val_losses_file = list(np.load(train_losses_path))
+            np.save(train_losses_path, np.asarray(val_losses_file + train_losses))
         except FileNotFoundError:
-            np.save(train_losses_path, np.asarray(losses))
+            np.save(train_losses_path, np.asarray(train_losses))
 
         if args.save_model != '':
             torch.save(model.state_dict(),
@@ -142,7 +175,10 @@ def plot_losses(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Trains specified model with specified parameters.')
 
-    parser.add_argument('--dataset_dir', type=str, default=r'D:\russian_words\train',
+    parser.add_argument('--train_dataset_dir', type=str, default=r'D:\russian_words\train',
+                        help='Directory with folders containing data and labels in .npy format.')
+
+    parser.add_argument('--test_dataset_path', type=str, default=r'D:\russian_words\real\outputs\1.json',
                         help='Directory with folders containing data and labels in .npy format.')
 
     parser.add_argument('--image_height', type=int, default=64, help='Height of input images.')
@@ -150,8 +186,8 @@ if __name__ == "__main__":
     parser.add_argument('--num_of_classes', type=int, default=33, help='Number of classes including blank character.')
     parser.add_argument('--num_of_lstm_hidden_units', type=int, default=256)
 
-    parser.add_argument('--batch_size', type=int, default=60, help='input batch size for training')
-    parser.add_argument('--test_batch_size', type=int, default=13, metavar='N',
+    parser.add_argument('--batch_size', type=int, default=64, help='input batch size for training')
+    parser.add_argument('--test_batch_size', type=int, default=16, metavar='N',
                         help='input batch size for testing')
     parser.add_argument('--epochs', type=int, default=3000,
                         help='number of epochs to train')
@@ -168,6 +204,9 @@ if __name__ == "__main__":
 
     parser.add_argument('--test_loss', default=r'D:\russian_words\test_losses',
                         help='Path to dump test losses')
+
+    parser.add_argument('--val_loss', default=r'D:\russian_words\val_losses',
+                        help='Path to dump val losses')
 
     parser.add_argument('--test_acc', default=r'D:\russian_words\test_accuracies',
                         help='Path to dump test accuracies')

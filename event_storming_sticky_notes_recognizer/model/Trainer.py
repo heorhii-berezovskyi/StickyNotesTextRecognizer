@@ -72,14 +72,6 @@ class Trainer:
                         correct += 1
 
         test_loss /= (len(test_loader.dataset) / test_loader.batch_size)
-
-        print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.
-              format(test_loss,
-                     correct,
-                     len(test_loader.dataset),
-                     100. * correct / len(test_loader.dataset)
-                     )
-              )
         return test_loss, 100. * correct / len(test_loader.dataset)
 
 

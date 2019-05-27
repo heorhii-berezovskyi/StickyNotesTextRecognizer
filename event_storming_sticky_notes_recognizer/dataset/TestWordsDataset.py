@@ -10,37 +10,34 @@ from event_storming_sticky_notes_recognizer.dataset.LabelEncoderDecoder import L
 
 
 class TestWordsDataset(Dataset):
-    def __init__(self, data_set_dir: str, transform=None, alphabet='russian'):
-        self.directory = data_set_dir
-        self.num_of_pages = len(os.listdir(data_set_dir))
+    def __init__(self, data_set_path: str, transform=None, alphabet='russian'):
+        self.data = self._load_file(path=data_set_path)
         self.transform = transform
         self.encoder_decoder = LabelEncoderDecoder(alphabet=alphabet)
 
+    @staticmethod
+    def _load_file(path: str):
+        with open(path, encoding='utf-8') as f:
+            data = json.load(f)
+        return data
+
     def __len__(self):
-        return self.num_of_pages
+        return len(self.data['outputs']['object'])
 
     def __getitem__(self, idx):
-        json_files = os.listdir(self.directory)
-        json_file_path = os.path.join(self.directory, json_files[idx])
+        page = cv2.imread(self.data['path'], cv2.IMREAD_COLOR)
 
-        with open(json_file_path, encoding='utf-8') as f:
-            data = json.load(f)
+        data = self.data['outputs']['object']
+        x_min = data[idx]['bndbox']['xmin']
+        y_min = data[idx]['bndbox']['ymin']
+        x_max = data[idx]['bndbox']['xmax']
+        y_max = data[idx]['bndbox']['ymax']
 
-        page = cv2.imread(data['path'], cv2.IMREAD_COLOR)
-
-        data = data['outputs']['object']
-        num_of_images = len(data)
-        random_image = np.random.randint(num_of_images)
-        x_min = data[random_image]['bndbox']['xmin']
-        y_min = data[random_image]['bndbox']['ymin']
-        x_max = data[random_image]['bndbox']['xmax']
-        y_max = data[random_image]['bndbox']['ymax']
-
-        label = data[random_image]['name']
+        label = data[idx]['name']
         label = self.encoder_decoder.encode_word(word=label)
 
         image = page[y_min: y_max, x_min: x_max, :]
-        image = image_resize(image, height=40)
+        image = image_resize(image, height=54)
 
         image_height = image.shape[0]
         image_width = image.shape[1]
@@ -91,3 +88,10 @@ def image_resize(image, width=None, height=None, inter=cv2.INTER_AREA):
 
     # return the resized image
     return resized
+
+
+if __name__ == "__main__":
+    json_file_path = r'D:\russian_words\real\outputs\SMinolta_Co19052713040.json'
+    with open(json_file_path, encoding='utf-8') as f:
+        data = json.load(f)
+    print()
