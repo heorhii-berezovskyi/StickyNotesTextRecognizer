@@ -24,7 +24,7 @@ class Rotate:
             rotate_prec = rotate_prec * max(rows / cols, cols / rows)
             rotate_angle = np.random.vonmises(0, kappa=rotate_prec) * 180 / np.pi
             M = cv2.getRotationMatrix2D((cols / 2, rows / 2), rotate_angle, 1)
-            img = cv2.warpAffine(img, M, (cols, rows))
+            img = cv2.warpAffine(img, M, (cols, rows), borderValue=(255, 255, 255))
             img[img > 255.] = 255.
             img[img < 0.] = 0.
             img = img.astype(np.uint8)

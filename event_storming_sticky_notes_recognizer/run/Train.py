@@ -39,32 +39,35 @@ def cut_state_dict_names(state_dict):
     return new_state_dict
 
 
+def load_from_snapshot(args, model):
+    state = torch.load(args.pretrained, 'cuda' if args.cuda else 'cpu')
+    if 'optimizer' in state:
+        optimizer_state = state['optimizer']
+        model_state = state['state_dict']
+        if args.cut_load_name:
+            model_state = cut_state_dict_names(state_dict=model_state)
+        model.load_state_dict(model_state)
+        return optimizer_state
+    else:
+        if args.cut_load_name:
+            state = cut_state_dict_names(state_dict=state)
+        model.load_state_dict(state)
+        return None
+
+
 def run(args):
     model = CRNN(image_height=args.image_height,
                  num_of_channels=args.num_of_channels,
                  num_of_classes=args.num_of_classes,
                  num_of_lstm_hidden_units=args.num_of_lstm_hidden_units)
 
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
-
     if torch.cuda.is_available() and not args.cuda:
         print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
+    optimizer_state = None
     if args.pretrained != '':
         print('loading pretrained model from %s' % args.pretrained)
-
-        state = torch.load(args.pretrained, 'cuda' if args.cuda else 'cpu')
-        if 'optimizer' in state:
-            optimizer_state = state['optimizer']
-            optimizer.load_state_dict(optimizer_state)
-            model_state = state['state_dict']
-            if args.cut_load_name:
-                model_state = cut_state_dict_names(state_dict=model_state)
-            model.load_state_dict(model_state)
-        else:
-            if args.cut_load_name:
-                state = cut_state_dict_names(state_dict=state)
-            model.load_state_dict(state)
+        optimizer_state = load_from_snapshot(args, model=model)
     else:
         model.apply(weights_init)
     print(model)
@@ -81,6 +84,10 @@ def run(args):
         train_image = train_image.cuda()
         test_image = test_image.cuda()
         criterion = criterion.cuda()
+
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
+    if optimizer_state is not None:
+        optimizer.load_state_dict(optimizer_state)
 
     train_image = Variable(train_image)
     test_image = Variable(test_image)
