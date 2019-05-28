@@ -6,6 +6,7 @@ import numpy as np
 from numpy import ndarray
 
 from event_storming_sticky_notes_recognizer.Exception import UnsupportedParamException
+from event_storming_sticky_notes_recognizer.dataset.ImageUtils import image_resize
 from event_storming_sticky_notes_recognizer.dataset.LabelEncoderDecoder import LabelEncoderDecoder
 
 
@@ -47,16 +48,13 @@ class RussianDatasetCreator:
     def resize_long_letter(self, letter: ndarray, type: str) -> ndarray:
         h, w, c = letter.shape
         new_h = np.random.randint(self.min_size, self.max_size)
-        new_w = int(w * new_h / h)
-        resized = cv2.resize(letter, (new_w, new_h))
-        # padded = self.pad(arr=resized, top=self.pad_val, bot=self.pad_val, left=self.pad_val, right=self.pad_val)
-        padded = resized
-        result = np.ones((self.word_h, padded.shape[1], c), dtype=np.uint8) * 255
+        resized = image_resize(image=letter, height=new_h)
+        result = np.ones((self.word_h, resized.shape[1], c), dtype=np.uint8) * 255
         pad = np.random.randint(5, 10)
         if type == 'top':
-            result[pad:padded.shape[0] + pad, :, :] = padded
+            result[pad:resized.shape[0] + pad, :, :] = resized
         elif type == 'bot':
-            result[self.word_h - padded.shape[0] - pad: self.word_h - pad, :, :] = padded
+            result[self.word_h - resized.shape[0] - pad: self.word_h - pad, :, :] = resized
         else:
             raise UnsupportedParamException('Letter type ' + type + ' is not supported.')
         return result
@@ -64,13 +62,11 @@ class RussianDatasetCreator:
     def resize_short_letter(self, letter: ndarray) -> ndarray:
         h, w, c = letter.shape
         new_h = np.random.randint(int(self.min_size / self.coef), int(self.max_size / self.coef))
-        new_w = int(w * new_h / h)
-        resized = cv2.resize(letter, (new_w, new_h))
-        padded = resized
-        result = np.ones((self.word_h, padded.shape[1], c), dtype=np.uint8) * 255
+        resized = image_resize(image=letter, height=new_h)
+        result = np.ones((self.word_h, resized.shape[1], c), dtype=np.uint8) * 255
 
         third_random = np.random.randint(int(self.word_h / 3) - 2, int(self.word_h / 3) + 2)
-        result[third_random: third_random + padded.shape[0], :, :] = padded
+        result[third_random: third_random + resized.shape[0], :, :] = resized
         return result
 
     def to_russian_image(self, word: str) -> (ndarray, ndarray):
@@ -95,7 +91,6 @@ class RussianDatasetCreator:
         labels = []
         i = 0
         for word in self.word_list:
-            # print(word)
             word_label, word_image = self.to_russian_image(word=word)
             word_w = word_image.shape[1]
             if occupied_w + word_w <= page_width:
@@ -167,7 +162,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Creates words dataset based on letter images.')
 
     parser.add_argument('--data_path', type=str,
-                        help='Path to a directory containing marker and pen subdirectories with image folders.',
+                        help='Path to a directory containing subdirectories with folders from 1 to 32(russian letters) each containing subfolders of letters written by a unique author.',
                         default=r'D:\russian_characters\experiment\small_roi')
 
     parser.add_argument('--words_path', type=str,
@@ -186,3 +181,5 @@ if __name__ == "__main__":
     _args = parser.parse_args()
 
     run(_args)
+
+

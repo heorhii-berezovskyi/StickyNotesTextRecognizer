@@ -116,7 +116,7 @@ def run(args):
     train_loader = DataLoader(dataset=train_dataset,
                               batch_size=args.batch_size,
                               shuffle=True,
-                              num_workers=4)
+                              num_workers=1)
 
     test_dataset = TestWordsDataset(data_set_path=args.test_dataset_path,
                                     transform=ToFloatTensor())
